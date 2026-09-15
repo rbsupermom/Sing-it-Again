@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1d1328" />
+<title>Sing It Again! — Karaoke Tracker</title>
+<style>
+  :root{
+    --bg:#13090a;
+    --panel:#261112;
+    --panel2:#3a1718;
+    --text:#f7efe1;
+    --muted:#d2c1a5;
+    --accent:#d4a64d;
+    --accent2:#8d1f24;
+    --good:#d4a64d;
+    --warn:#f1cb6a;
+    --danger:#ff9da8;
+    --lavender:#f1dfbf;
+    --line:#6a3a22;
+    --shadow:0 14px 36px rgba(0,0,0,.34);
+    --radius:20px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at 50% 4%, rgba(255,230,165,.11), transparent 20%),
+      linear-gradient(180deg, rgba(84,14,18,.96), rgba(28,10,12,1) 28%, rgba(17,7,7,1) 100%);
+    color:var(--text);
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  body::before, body::after{
+    content:"";
+    position:fixed;
+    pointer-events:none;
+    z-index:0;
+  }
+  body::before{
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(24,7,8,0) 0%, rgba(24,7,8,0) 8%, rgba(0,0,0,.14) 8.5%, rgba(24,7,8,0) 9%, rgba(24,7,8,0) 91%, rgba(0,0,0,.14) 91.5%, rgba(24,7,8,0) 92%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 2px, rgba(0,0,0,0) 2px 74px),
+      linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.02));
+    opacity:.55;
+  }
+  body::after{
+    left:50%;
+    bottom:-14vh;
+    width:min(72vw,620px);
+    height:42vh;
+    transform:translateX(-50%);
+    background:
+      linear-gradient(180deg, rgba(255,215,140,.10), rgba(255,215,140,0) 18%),
+      linear-gradient(180deg, #8d1f24 0%, #6f161b 42%, #4e0f14 100%);
+    clip-path:polygon(16% 0, 84% 0, 100% 100%, 0 100%);
+    box-shadow:
+      0 -18px 30px rgba(255,214,140,.10),
+      inset 0 0 0 2px rgba(212,166,77,.22),
+      inset 0 28px 40px rgba(255,255,255,.04);
+    opacity:.92;
+  }
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:94px;position:relative;z-index:1}
+  header{
+    padding:18px 18px 12px;
+    position:sticky;top:0;z-index:5;
+    backdrop-filter: blur(18px);
+    background:linear-gradient(to bottom, rgba(18,13,24,.97), rgba(18,13,24,.78), transparent);
+  }
+  .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand h1{margin:0;font-size:1.55rem;letter-spacing:-.03em}
+  .brand small{color:var(--muted);display:block;margin-top:2px}
+  .pill{
+    padding:8px 11px;border-radius:999px;background:rgba(212,166,77,.10);
+    color:#f2ddb2;border:1px solid rgba(212,166,77,.28);font-size:.78rem;font-weight:700;
+  }
+  main{padding:0 16px}
+  .screen{display:none}.screen.active{display:block}
+  .hero{
+    background:linear-gradient(145deg, rgba(211,156,255,.13), rgba(35,181,175,.08));
+    border:1px solid var(--line);border-radius:26px;padding:20px;box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .hero h2{margin:0 0 7px;font-size:1.58rem;color:#f8e6be}
+  .hero p{margin:0;color:var(--muted);line-height:1.45}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 12px}
+  .section-title h3{margin:0;font-size:1rem;color:#efdbb1}
+  .section-title span{color:#cdb78d;font-size:.8rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .mode{
+    border:1px solid rgba(212,166,77,.22);background:linear-gradient(180deg, rgba(54,18,18,.96), rgba(34,12,12,.97));color:var(--text);border-radius:20px;
+    min-height:126px;padding:16px;text-align:left;box-shadow:var(--shadow);
+  }
+  .mode .emoji{font-size:1.65rem;display:block;margin-bottom:12px}
+  .mode strong{display:block;font-size:1rem;margin-bottom:4px}
+  .mode span{color:var(--muted);font-size:.8rem;line-height:1.35;display:block}
+  .mode.full{grid-column:1/-1;min-height:auto}
+  .card{
+    background:linear-gradient(180deg, rgba(43,16,17,.98), rgba(31,11,12,.98));
+    border:1px solid rgba(212,166,77,.18);border-radius:var(--radius);
+    padding:15px;box-shadow:var(--shadow);margin-bottom:11px;
+  }
+  .song-row{display:flex;gap:12px;align-items:center}
+  .song-main{flex:1;min-width:0}
+  .song-main strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .song-main small{color:var(--muted)}
+  .song-meta{margin-top:7px;color:var(--muted);font-size:.76rem;display:flex;gap:10px;flex-wrap:wrap}
+  .icon-btn,.ghost-btn,.primary-btn,.danger-btn{
+    border:none;border-radius:14px;padding:10px 13px;font-weight:800;
+  }
+  .icon-btn{background:#4c191b;color:#f8eddd;min-width:42px;border:1px solid rgba(212,166,77,.18)}
+  .ghost-btn{background:rgba(212,166,77,.08);border:1px solid rgba(212,166,77,.26);color:#f7e4bf}
+  .primary-btn{background:var(--accent);color:#231506;border:1px solid rgba(255,232,175,.28);box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+  .purple-btn{background:#7a1f22;color:#f7eddc;border:1px solid rgba(212,166,77,.20);border-radius:14px;padding:10px 13px;font-weight:800}
+  .lavender-btn{background:rgba(212,166,77,.10);color:#f0ddb7;border:1px solid rgba(212,166,77,.28);border-radius:14px;padding:10px 13px;font-weight:800}
+  .danger-btn{background:rgba(255,125,142,.13);color:var(--danger);border:1px solid rgba(255,125,142,.25)}
+  .btn-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .btn-row button{flex:1}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .stat{background:linear-gradient(180deg, rgba(54,18,18,.98), rgba(31,11,12,.98));border:1px solid rgba(212,166,77,.20);border-radius:18px;padding:13px;text-align:center}
+  .stat b{display:block;font-size:1.35rem}
+  .stat span{color:var(--muted);font-size:.73rem}
+  .empty{padding:24px 12px;text-align:center;color:var(--muted)}
+  .queue-number{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(216,199,255,.12);color:var(--lavender);font-weight:900;flex:0 0 34px;
+  }
+  .tag{
+    display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;
+    background:rgba(212,166,77,.08);border:1px solid rgba(212,166,77,.15);
+    color:#e6cf9e;font-size:.72rem;margin:3px 3px 0 0;
+  }
+  .fav{color:#ffd26d}
+  .search{
+    width:100%;padding:13px 14px;border-radius:16px;background:rgba(53,18,19,.98);
+    border:1px solid rgba(212,166,77,.20);color:var(--text);outline:none;margin-bottom:12px;
+  }
+  .search:focus{border-color:var(--accent); box-shadow:0 0 0 2px rgba(212,166,77,.10)}
+  .bottom-nav{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(520px,100%);
+    background:linear-gradient(180deg, rgba(56,14,16,.98), rgba(29,10,10,.98));backdrop-filter:blur(18px);border-top:1px solid rgba(212,166,77,.20);
+    display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:10;
+    box-shadow:0 -8px 24px rgba(0,0,0,.28);
+  }
+  .nav-btn{
+    background:transparent;border:none;color:var(--muted);padding:8px 4px;border-radius:14px;font-size:.72rem;
+  }
+  .nav-btn span{display:block;font-size:1.25rem;margin-bottom:3px}
+  .nav-btn.active{color:#f8e7bf;background:rgba(212,166,77,.13);border:1px solid rgba(212,166,77,.18)}
+  .modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;align-items:flex-end;justify-content:center;
+    z-index:50;padding:10px;
+  }
+  .modal.show{display:flex}
+  .sheet{
+    width:min(510px,100%);background:linear-gradient(180deg, rgba(65,19,19,.98), rgba(31,11,12,.99));border:1px solid rgba(212,166,77,.24);
+    border-radius:26px 26px 18px 18px;padding:19px;max-height:88vh;overflow:auto;box-shadow:var(--shadow);
+  }
+  .sheet h3{margin:0 0 6px;font-size:1.25rem}
+  .sheet p{color:var(--muted);margin:0 0 14px;line-height:1.45}
+  label{display:block;margin:12px 0 5px;color:var(--muted);font-size:.8rem}
+  input,select,textarea{
+    width:100%;background:#4a1b1d;border:1px solid rgba(212,166,77,.18);border-radius:14px;
+    color:var(--text);padding:12px 13px;outline:none;
+  }
+  textarea{min-height:80px;resize:vertical}
+  .checkbox-row{display:flex;align-items:center;gap:9px;margin:13px 0}
+  .checkbox-row input{width:auto}
+  .pick-card{
+    background:linear-gradient(145deg,rgba(211,156,255,.14),rgba(35,181,175,.07));
+    border:1px solid var(--line);border-radius:22px;padding:18px;margin:14px 0;
+  }
+  .pick-card .big{font-size:1.35rem;font-weight:900;margin-bottom:3px}
+  .pick-card .artist{color:var(--muted);margin-bottom:10px}
+  .pick-card .reason{font-size:.83rem;line-height:1.45;color:var(--muted)}
+  .tiny{font-size:.76rem;color:var(--muted)}
+  .live-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;
+    background:rgba(212,166,77,.10);border:1px solid rgba(212,166,77,.28);color:#f7e1af;
+    font-size:.72rem;font-weight:900;letter-spacing:.08em}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#ffdf93;box-shadow:0 0 12px rgba(255,223,147,.85)}
+  .stage-card{border-color:rgba(212,166,77,.26);box-shadow:0 0 0 1px rgba(255,228,168,.03),0 14px 34px rgba(0,0,0,.32)}
+  .stage-rule{height:3px;border-radius:999px;background:linear-gradient(90deg,transparent,#f0d290,#b7832f,#f2dfb6,transparent);opacity:.82;margin:6px 0 14px}
+  .companion-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;
+    background:rgba(212,166,77,.08);border:1px solid rgba(212,166,77,.22);color:#f3deba;font-size:.75rem;font-weight:800}
+  .marquee{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    padding:16px 20px;
+    border-radius:24px;
+    background:
+      linear-gradient(180deg, rgba(84,20,19,.95), rgba(45,15,14,.96));
+    border:1px solid rgba(212,166,77,.45);
+    box-shadow:
+      0 0 0 1px rgba(255,228,168,.07),
+      0 14px 34px rgba(0,0,0,.35),
+      inset 0 0 0 2px rgba(212,166,77,.12),
+      inset 0 0 28px rgba(255,232,175,.05);
+    position:relative;
+    isolation:isolate;
+    overflow:visible;
+  }
+  .marquee::before{
+    content:"";
+    position:absolute;
+    inset:-8px;
+    border-radius:30px;
+    pointer-events:none;
+    background:
+      radial-gradient(circle, #ffe8a1 0 3px, transparent 4px) top center / 22px 10px repeat-x,
+      radial-gradient(circle, #ffe8a1 0 3px, transparent 4px) bottom center / 22px 10px repeat-x,
+      radial-gradient(circle, #ffe8a1 0 3px, transparent 4px) left center / 10px 22px repeat-y,
+      radial-gradient(circle, #ffe8a1 0 3px, transparent 4px) right center / 10px 22px repeat-y;
+    filter: drop-shadow(0 0 6px rgba(255,232,161,.95)) drop-shadow(0 0 12px rgba(255,232,161,.45));
+    opacity:.96;
+  }
+  .marquee h1{
+    margin:0;
+    font-size:1.46rem;
+    letter-spacing:-.03em;
+    line-height:1.05;
+    color:#f6e7c4;
+  }
+  .marquee-bulb{
+    display:none;
+  }
+  .show-subtitle{
+    color:#d4b87b;
+    display:block;
+    margin-top:4px;
+    font-size:.78rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .hero.stage-card{
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,232,175,.08), transparent 22%),
+      linear-gradient(180deg, rgba(84,18,19,.95), rgba(37,12,12,.97));
+  }
+  .showtime{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(212,166,77,.10);
+    border:1px solid rgba(212,166,77,.20);
+    color:#f4e0b4;
+    font-size:.74rem;
+    font-weight:900;
+    letter-spacing:.08em;
+    margin-bottom:10px;
+    text-transform:uppercase;
+  }
+  .section-title h3{
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    font-size:.92rem;
+  }
+  .mode{
+    position:relative;
+    overflow:hidden;
+  }
+  .mode::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg, rgba(255,245,210,.035), transparent 35%);
+    pointer-events:none;
+  }
+  .notice{
+    padding:11px 13px;background:rgba(35,181,175,.08);border:1px solid rgba(35,181,175,.22);
+    color:#bdeeed;border-radius:14px;font-size:.82rem;margin-bottom:12px;
+  }
+  .history-date{font-size:.78rem;color:var(--muted);margin:15px 2px 7px;font-weight:800}
+  .topline{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .small-action{font-size:.76rem;padding:7px 9px}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sing It Again!">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Sing It Again!">
+<meta name="description" content="Personal karaoke tracker with Roulette, Kamikaze, My Jam, Companion Singer, sessions, history, and stats.">
+
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="marquee">
+        <span class="marquee-bulb"></span>
+        <div>
+          <h1>🎤 Sing It Again!</h1>
+          
+        </div>
+        <span class="marquee-bulb"></span>
+      </div>
+      <div class="pill" id="sessionPill">No active show</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="screen active" id="homeScreen">
+      <div class="hero stage-card">
+        <div class="showtime">✨ SHOWTIME</div>
+        <div class="stage-rule"></div>
+        <div id="liveHomeBadge" style="display:none;margin-bottom:10px"><span class="live-badge"><span class="live-dot"></span> LIVE KARAOKE</span></div>
+        
+        <div class="btn-row">
+          <button class="primary-btn" id="startNightBtn">Start Tonight's Show</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <button class="mode" data-mode="roulette">
+          <span class="emoji">🎲</span>
+          <strong>Karaoke Roulette</strong>
+          <span>Pick something from your own list.</span>
+        </button>
+        <button class="mode" data-mode="kamikaze">
+          <span class="emoji">💣</span>
+          <strong>Kamikaze</strong>
+          <span>Try something similar—but not on your list.</span>
+        </button>
+        <button class="mode" data-mode="myjam">
+          <span class="emoji">❤️</span>
+          <strong>My Jam</strong>
+          <span>Pull from your favorite go-to songs.</span>
+        </button>
+        <button class="mode" id="browseSongsBtn">
+          <span class="emoji">🔎</span>
+          <strong>Pick My Own</strong>
+          <span>Browse your full karaoke library.</span>
+        </button>
+        <button class="mode full" id="companionBtn">
+          <span class="emoji">👯‍♀️</span>
+          <strong>Companion Singer</strong>
+          <span id="companionModeText">Add your karaoke partner for duets, shared jams, and together performances.</span>
+        </button>
+      </div>
+
+      <div class="section-title"><h3>Show stats</h3><span>local prototype</span></div>
+      <div class="stats">
+        <div class="stat"><b id="statPerformances">0</b><span>Performances</span></div>
+        <div class="stat"><b id="statSongs">0</b><span>Different songs</span></div>
+        <div class="stat"><b id="statJams">0</b><span>My Jams</span></div>
+        <div class="stat"><b id="statVariety">0%</b><span>Variety Score</span></div>
+        <div class="stat"><b id="statNewSongs">0</b><span>New Songs</span></div>
+        <div class="stat"><b id="statDuets">0</b><span>Together</span></div>
+      </div>
+      <div class="card" id="funStatCard" style="margin-top:11px"></div>
+
+      <div class="section-title"><h3>Recent performances</h3><span id="recentCount"></span></div>
+      <div id="recentList"></div>
+    </section>
+
+    <section class="screen" id="tonightScreen">
+      <div class="hero stage-card">
+        <div class="showtime">🎭 NOW PERFORMING</div>
+        <div class="stage-rule"></div>
+        <div class="topline">
+          <div>
+            <h2 style="margin-bottom:3px">Tonight's Show</h2>
+            <p id="tonightLabel">No show started yet.</p><div id="tonightCompanion"></div>
+          </div>
+          <button class="ghost-btn small-action" id="endNightBtn" style="display:none">End night</button>
+        </div>
+        <div class="btn-row">
+          <button class="primary-btn" id="quickRouletteBtn">🎲 🎭 Pick my next number</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>Tonight's Queue</h3><span id="queueCount">0 queued</span></div>
+      <div id="queueList"></div>
+
+      <div class="section-title"><h3>Performed tonight</h3><span id="sungTonightCount">0 songs</span></div>
+      <div id="sungTonightList"></div>
+    </section>
+
+    <section class="screen" id="songsScreen">
+      <div class="topline" style="margin-bottom:12px">
+        <div>
+          <h2 style="margin:0">My Songs</h2>
+          <div class="tiny" id="libraryCount">0 songs</div>
+        </div>
+        <button class="primary-btn" id="addSongBtn">+ Add song</button>
+      </div>
+      <input class="search" id="songSearch" placeholder="Search song, artist or tag…" />
+      <div id="songList"></div>
+    </section>
+
+    <section class="screen" id="historyScreen">
+      <div class="hero">
+        <h2>Performance History</h2>
+        <p>Your performance history builds here automatically every time you tap <strong>Sang It</strong>.</p>
+      </div>
+      <div id="historyList"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-screen="homeScreen"><span>🏠</span>Home</button>
+    <button class="nav-btn" data-screen="tonightScreen"><span>🎤</span>Tonight</button>
+    <button class="nav-btn" data-screen="songsScreen"><span>🎵</span>My Songs</button>
+    <button class="nav-btn" data-screen="historyScreen"><span>📊</span>History</button>
+  </nav>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet" id="modalSheet"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'singItAgainPrototypeV10';
+
+const spotifySeedSongs = [{"title": "No One Else On Earth", "artist": "Wynonna", "sourcePlaylists": ["Karaoke"]}, {"title": "Bitch", "artist": "Meredith Brooks", "sourcePlaylists": ["Karaoke"]}, {"title": "Don't Turn Around (Originally Performed by Ace of Base) [Vocal Version]", "artist": "Mega Tracks Karaoke Band", "sourcePlaylists": ["Karaoke"]}, {"title": "I Will Always Love You (Originally Performed by Whitney Houston) [Vocal Version]", "artist": "Mega Tracks Karaoke Band", "sourcePlaylists": ["Karaoke"]}, {"title": "The Right Kind Of Wrong", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "You Oughta Know - 2015 Remaster", "artist": "Alanis Morissette", "sourcePlaylists": ["Karaoke"]}, {"title": "Give Me One Reason", "artist": "Tracy Chapman", "sourcePlaylists": ["Karaoke"]}, {"title": "She's In Love With The Boy", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Settlin'", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "If It Makes You Happy", "artist": "Sheryl Crow", "sourcePlaylists": ["Karaoke"]}, {"title": "That's What I Like About You", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Mama's Broken Heart", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "Any Man Of Mine", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Kiss Me", "artist": "Sixpence None The Richer", "sourcePlaylists": ["Karaoke"]}, {"title": "Ironic - 2015 Remaster", "artist": "Alanis Morissette", "sourcePlaylists": ["Karaoke"]}, {"title": "Strawberry Wine", "artist": "Deana Carter", "sourcePlaylists": ["Karaoke"]}, {"title": "What's Up?", "artist": "4 Non Blondes", "sourcePlaylists": ["Karaoke"]}, {"title": "Heads Carolina, Tails California", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "There's Your Trouble", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Whose Bed Have Your Boots Been Under?", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Maybe It Was Memphis", "artist": "Pam Tillis", "sourcePlaylists": ["Karaoke"]}, {"title": "One Way Ticket (Because I Can)", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "My Baby Loves Me", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Try to Think About Elvis", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Landslide", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Guys Do It All the Time", "artist": "Mindy McCready", "sourcePlaylists": ["Karaoke"]}, {"title": "Blame It on Your Heart", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Blue", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "Shake The Sugar Tree", "artist": "Pam Tillis", "sourcePlaylists": ["Karaoke"]}, {"title": "Why Not Me", "artist": "The Judds", "sourcePlaylists": ["Karaoke"]}, {"title": "Girls Lie Too - Greatest Hits Version", "artist": "Terri Clark", "sourcePlaylists": ["Karaoke"]}, {"title": "Grandpa (Tell Me 'Bout The Good Old Days)", "artist": "The Judds", "sourcePlaylists": ["Karaoke"]}, {"title": "There Is No Arizona", "artist": "Jamie O'Neal", "sourcePlaylists": ["Karaoke"]}, {"title": "No One Needs To Know", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Redneck Woman", "artist": "Gretchen Wilson", "sourcePlaylists": ["Karaoke"]}, {"title": "A Broken Wing", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Just Wanna Be Mad", "artist": "Terri Clark", "sourcePlaylists": ["Karaoke"]}, {"title": "Kerosene", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "Stay", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "Something More", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "All I Want To Do", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "Break Down Here", "artist": "Julie Roberts", "sourcePlaylists": ["Karaoke"]}, {"title": "You Don't Even Know Who I Am", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Chains", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Gunpowder & Lead", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm That Kind Of Girl", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Walkin' After Midnight", "artist": "Patsy Cline", "sourcePlaylists": ["Karaoke"]}, {"title": "Wrong Side Of Memphis", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm Alright", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "This One's for the Girls", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Hope You Dance", "artist": "Lee Ann Womack", "sourcePlaylists": ["Karaoke"]}, {"title": "Not Ready to Make Nice", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "It's A Little Too Late", "artist": "Tanya Tucker", "sourcePlaylists": ["Karaoke"]}, {"title": "Eighteen Wheels And A Dozen Roses", "artist": "Kathy Mattea", "sourcePlaylists": ["Karaoke"]}, {"title": "Hell on Heels", "artist": "Pistol Annies, Miranda Lambert, Ashley Monroe, Angaleena Presley", "sourcePlaylists": ["Karaoke"]}, {"title": "Rescue", "artist": "Lauren Daigle", "sourcePlaylists": ["Karaoke"]}, {"title": "You Say", "artist": "Lauren Daigle", "sourcePlaylists": ["Karaoke"]}, {"title": "There Are Worse Things I Could Do - From “Grease”", "artist": "Stockard Channing", "sourcePlaylists": ["Karaoke"]}, {"title": "This Woman Needs", "artist": "SHeDAISY", "sourcePlaylists": ["Karaoke"]}, {"title": "Except for Monday", "artist": "Lorrie Morgan", "sourcePlaylists": ["Karaoke"]}, {"title": "I Can Love You Better", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "It Matters to Me", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "Yoü And I", "artist": "Lady Gaga", "sourcePlaylists": ["Karaoke"]}, {"title": "Rolling in the Deep", "artist": "Adele", "sourcePlaylists": ["Karaoke"]}, {"title": "If I Ain't Got You", "artist": "Alicia Keys", "sourcePlaylists": ["Karaoke"]}, {"title": "Stay", "artist": "Rihanna, Mikky Ekko", "sourcePlaylists": ["Karaoke"]}, {"title": "Here for the Party", "artist": "Gretchen Wilson", "sourcePlaylists": ["Karaoke"]}, {"title": "Breathe", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "Shallow", "artist": "Lady Gaga, Bradley Cooper", "sourcePlaylists": ["Karaoke"]}, {"title": "When Will I Be Loved", "artist": "Linda Ronstadt", "sourcePlaylists": ["Karaoke"]}, {"title": "Stone Cold", "artist": "Demi Lovato", "sourcePlaylists": ["Karaoke"]}, {"title": "Forgive", "artist": "Rebecca Lynn Howard", "sourcePlaylists": ["Karaoke"]}, {"title": "Gun In My Hand", "artist": "Dorothy", "sourcePlaylists": ["Karaoke"]}, {"title": "Black Velvet", "artist": "Alannah Myles", "sourcePlaylists": ["Karaoke"]}, {"title": "My Give A Damn's Busted", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "Don't Stop Believin'", "artist": "Journey", "sourcePlaylists": ["Karaoke"]}, {"title": "Holding Out for a Hero - From \"Footloose\" Soundtrack", "artist": "Bonnie Tyler", "sourcePlaylists": ["Karaoke"]}, {"title": "Straight Up", "artist": "Paula Abdul", "sourcePlaylists": ["Karaoke"]}, {"title": "Listen To Your Heart", "artist": "Roxette", "sourcePlaylists": ["Karaoke"]}, {"title": "Hero", "artist": "Mariah Carey", "sourcePlaylists": ["Karaoke"]}, {"title": "Walkin' After Midnight", "artist": "Patsy Cline, The Jordanaires", "sourcePlaylists": ["Karaoke"]}, {"title": "XXX's And OOO's (An American Girl)", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Strong Enough", "artist": "Sheryl Crow", "sourcePlaylists": ["Karaoke"]}, {"title": "Make You Feel My Love", "artist": "Adele", "sourcePlaylists": ["Karaoke"]}, {"title": "Last Name", "artist": "Carrie Underwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Just Like a Pill", "artist": "P!nk", "sourcePlaylists": ["Karaoke", "TRY SOMETHING NEW"]}, {"title": "Something To Talk About", "artist": "Bonnie Raitt", "sourcePlaylists": ["Karaoke"]}, {"title": "Like We Never Loved at All", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "You Were Meant For Me", "artist": "Jewel", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm The Only One", "artist": "Melissa Etheridge", "sourcePlaylists": ["Karaoke"]}, {"title": "Goodbye Earl", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Girl Crush", "artist": "Little Big Town", "sourcePlaylists": ["Karaoke"]}, {"title": "Johnny & June", "artist": "Heidi Newfield", "sourcePlaylists": ["Karaoke"]}, {"title": "Foolish Games", "artist": "Jewel", "sourcePlaylists": ["Karaoke"]}, {"title": "Rockin' Years (with Ricky Van Shelton)", "artist": "Dolly Parton, Ricky Van Shelton", "sourcePlaylists": ["Karaoke"]}, {"title": "Ashes By Now", "artist": "Lee Ann Womack", "sourcePlaylists": ["Karaoke"]}, {"title": "Tennessee Whiskey", "artist": "Chris Stapleton", "sourcePlaylists": ["Karaoke", "Karaoke (Male)"]}, {"title": "Dance Monkey", "artist": "Tones And I", "sourcePlaylists": ["Karaoke"]}, {"title": "drivers license", "artist": "Olivia Rodrigo", "sourcePlaylists": ["Karaoke"]}, {"title": "I Have Nothing", "artist": "Whitney Houston", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "F**kin' Perfect", "artist": "P!nk", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Complicated", "artist": "Avril Lavigne", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Because of You", "artist": "Kelly Clarkson", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Love Song", "artist": "Sara Bareilles", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "That Don't Impress Me Much", "artist": "Shania Twain", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Teenage Dream", "artist": "Katy Perry", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Slow Dance", "artist": "Kelly Clarkson", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "What I'm Doing Here", "artist": "Lake Street Dive", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Slide", "artist": "The Goo Goo Dolls", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Vice", "artist": "Miranda Lambert", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Torn", "artist": "Natalie Imbruglia", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Raise Your Glass", "artist": "P!nk", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Maybe", "artist": "Janis Joplin", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Umbrella", "artist": "Rihanna, JAŸ-Z", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Bleeding Love", "artist": "Leona Lewis", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Ain't It Fun", "artist": "Paramore", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Crush", "artist": "Jennifer Paige", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Piece of My Heart", "artist": "Big Brother & The Holding Company, Janis Joplin", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Are You Happy Now?", "artist": "Michelle Branch", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Girl on Fire", "artist": "Alicia Keys", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "All of Me", "artist": "John Legend", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Pray", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lay Me Down (feat. John Legend)", "artist": "Sam Smith, John Legend", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "I'm Not The Only One", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Stay With Me", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lay Me Down", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Cold", "artist": "Chris Stapleton", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Cryin'", "artist": "Aerosmith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lights", "artist": "Journey", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Little Bitty Pretty One", "artist": "Thurston Harris, The Sharps", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "I Don't Want To Miss A Thing", "artist": "Aerosmith", "sourcePlaylists": ["Karaoke (Male)"]}].map(s => ({
+  id: crypto.randomUUID(),
+  title: s.title,
+  artist: s.artist,
+  favorite: false,
+  ourJam: false,
+  tags: [],
+  sourcePlaylists: s.sourcePlaylists,
+  count: 0,
+  lastSung: null,
+  notes: ''
+}));
+
+const starterSongs = spotifySeedSongs;
+
+const kamikazePool = [
+  {title:'Because of You', artist:'Kelly Clarkson', reason:'Big vocal build and emotional pop-rock energy that fits strong power-vocal songs.'},
+  {title:'Ironic', artist:'Alanis Morissette', reason:'90s alternative with a conversational verse and a chorus that works well in a karaoke room.'},
+  {title:'You Oughta Know', artist:'Alanis Morissette', reason:'A gutsier rock pick if your list leans toward Heart, Pat Benatar and 90s rock.'},
+  {title:'Bring Me Some Water', artist:'Melissa Etheridge', reason:'Bluesy rock energy with room for a powerful vocal without being a carbon copy of your current list.'},
+  {title:'Edge of Seventeen', artist:'Stevie Nicks', reason:'Classic rock, instantly recognizable, and a natural neighbor to your stronger rock selections.'},
+  {title:'The Story', artist:'Brandi Carlile', reason:'Starts controlled and gives you a big vocal payoff—good if you like songs that build.'},
+  {title:'Stronger (What Doesn’t Kill You)', artist:'Kelly Clarkson', reason:'High-energy crowd song with a strong belt-friendly chorus.'}
+];
+
+function defaultState(){
+  return {
+    songs: starterSongs,
+    performances: [],
+    sessions: [],
+    activeSessionId: null,
+    queue: [],
+    companion: {enabled:false, name:'Erica'}
+  };
+}
+
+let state;
+try {
+  state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState();
+} catch {
+  state = defaultState();
+}
+if(!Array.isArray(state.songs) || !state.songs.length) state.songs = starterSongs;
+if(!state.companion) state.companion = {enabled:false, name:'Erica'};
+state.songs.forEach(s=>{ if(typeof s.ourJam==='undefined') s.ourJam=false; });
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function fmtDate(iso){
+  if(!iso) return 'Never';
+  return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtTime(iso){
+  return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+function getSong(id){return state.songs.find(s=>s.id===id)}
+function activeSession(){return state.sessions.find(s=>s.id===state.activeSessionId)}
+
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
+  renderAll();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderAll(){
+  renderHeader();
+  renderHome();
+  renderTonight();
+  renderSongs();
+  renderHistory();
+  save();
+}
+
+function renderHeader(){
+  const session = activeSession();
+  const pill = document.getElementById('sessionPill');
+  pill.textContent = session ? `🎤 ${session.name}` : 'No active show';
+}
+
+function renderHome(){
+  const total = state.performances.length;
+  const unique = new Set(state.performances.map(p=>p.songId)).size;
+  const jams = state.songs.filter(s=>s.favorite).length;
+  document.getElementById('statPerformances').textContent = total;
+  document.getElementById('statSongs').textContent = unique;
+  document.getElementById('statJams').textContent = jams;
+  const recent25=[...state.performances].sort((a,b)=>new Date(b.sungAt)-new Date(a.sungAt)).slice(0,25);
+  const variety = recent25.length ? Math.round((new Set(recent25.map(p=>p.songId)).size/recent25.length)*100) : 0;
+  const firstTimeIds=new Set();
+  state.performances.forEach(p=>firstTimeIds.add(p.songId));
+  const newSongs=state.songs.filter(s=>(s.count||0)===1).length;
+  const duets=state.performances.filter(p=>p.performer==='together').length;
+  document.getElementById('statVariety').textContent = `${variety}%`;
+  document.getElementById('statNewSongs').textContent = newSongs;
+  document.getElementById('statDuets').textContent = duets;
+  const counts=[...state.songs].sort((a,b)=>(b.count||0)-(a.count||0));
+  const repeat=counts.find(s=>(s.count||0)>0);
+  const artistCounts={};
+  state.performances.forEach(p=>{const s=getSong(p.songId); if(s) artistCounts[s.artist]=(artistCounts[s.artist]||0)+1;});
+  const topArtist=Object.entries(artistCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('funStatCard').innerHTML = repeat
+    ? `<strong>🎶 Repeat Offender:</strong> ${esc(repeat.title)} · ${repeat.count}×${topArtist?`<div class="song-meta"><span>Top artist: ${esc(topArtist[0])} · ${topArtist[1]} performances</span></div>`:''}`
+    : `<div class="tiny">Your fun stats will start filling in after your first few karaoke nights.</div>`;
+  document.getElementById('liveHomeBadge').style.display = activeSession() ? '' : 'none';
+  document.getElementById('companionModeText').textContent = state.companion.enabled
+    ? `${state.companion.name} is linked for duets, shared jams, and together performances.`
+    : 'Add your karaoke partner for duets, shared jams, and together performances.';
+
+  const session = activeSession();
+  const homeGreeting = document.getElementById('homeGreeting');
+  const homeSub = document.getElementById('homeSub');
+  if (homeGreeting) homeGreeting.textContent = session ? `${session.name} is live 🎤` : 'Ready to take the stage?';
+  if (homeSub) homeSub.textContent = session
+    ? `You have ${state.queue.length} song${state.queue.length===1?'':'s'} queued. Pick a mode or keep building tonight's list.`
+    : 'Start a karaoke night, step onto the red carpet, and let the app help you pick your next number.';
+  document.getElementById("startNightBtn").textContent = session ? "Go to Tonight's Show" : "Start Tonight's Show";
+
+  const recent = [...state.performances].sort((a,b)=>new Date(b.sungAt)-new Date(a.sungAt)).slice(0,5);
+  document.getElementById('recentCount').textContent = recent.length ? `${recent.length} shown` : '';
+  const box = document.getElementById('recentList');
+  if(!recent.length){
+    box.innerHTML = `<div class="card empty">Nothing logged yet. Your first <strong>Sang It</strong> tap will show up here.</div>`;
+    return;
+  }
+  box.innerHTML = recent.map(p=>{
+    const s=getSong(p.songId);
+    if(!s) return '';
+    return `<div class="card song-row">
+      <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
+      <div class="song-meta"><span>${fmtDate(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span></div></div>
+      ${s.favorite?'<div class="fav">★</div>':''}
+    </div>`;
+  }).join('');
+}
+
+function renderTonight(){
+  const session=activeSession();
+  document.getElementById('tonightLabel').textContent = session ? `${session.name} · started ${fmtTime(session.startedAt)}` : 'No show started yet.';
+  document.getElementById('tonightCompanion').innerHTML = state.companion.enabled
+    ? `<span class="companion-chip">👯‍♀️ ${esc(state.companion.name)} singing with you</span>` : '';
+  document.getElementById('endNightBtn').style.display = session ? '' : 'none';
+
+  const queueBox=document.getElementById('queueList');
+  document.getElementById('queueCount').textContent = `${state.queue.length} queued`;
+  if(!session){
+    queueBox.innerHTML=`<div class="card empty">Start a karaoke night to build tonight's queue.</div>`;
+  } else if(!state.queue.length){
+    queueBox.innerHTML=`<div class="card empty">Your queue is empty. Use Roulette, My Jam, Kamikaze, or browse your songs.</div>`;
+  } else {
+    queueBox.innerHTML=state.queue.map((songId,i)=>{
+      const s=getSong(songId); if(!s)return '';
+      return `<div class="card song-row">
+        <div class="queue-number">${i+1}</div>
+        <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
+          <div class="song-meta"><span>${s.count||0} lifetime</span><span>Last: ${fmtDate(s.lastSung)}</span></div>
+        </div>
+        <button class="icon-btn" onclick="performanceDialog('${s.id}')" title="Sang It">✓</button>
+        <button class="icon-btn" onclick="removeFromQueue('${s.id}')" title="Remove">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  const sung = session ? state.performances.filter(p=>p.sessionId===session.id).sort((a,b)=>new Date(b.sungAt)-new Date(a.sungAt)) : [];
+  document.getElementById('sungTonightCount').textContent = `${sung.length} song${sung.length===1?'':'s'}`;
+  const sungBox=document.getElementById('sungTonightList');
+  sungBox.innerHTML = sung.length ? sung.map(p=>{
+    const s=getSong(p.songId); if(!s)return '';
+    return `<div class="card song-row">
+      <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
+      <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${s.count} lifetime</span>${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
+      <div style="color:var(--good);font-weight:900">SUNG</div>
+    </div>`;
+  }).join('') : `<div class="card empty">No performances logged tonight yet.</div>`;
+}
+
+function renderSongs(){
+  const q=document.getElementById('songSearch').value.trim().toLowerCase();
+  const songs=[...state.songs]
+    .filter(s=>!q || `${s.title} ${s.artist} ${(s.tags||[]).join(' ')} ${(s.sourcePlaylists||[]).join(' ')}`.toLowerCase().includes(q))
+    .sort((a,b)=>Number(b.favorite)-Number(a.favorite)||a.title.localeCompare(b.title));
+  document.getElementById('libraryCount').textContent=`${state.songs.length} songs`;
+  const box=document.getElementById('songList');
+  if(!songs.length){box.innerHTML=`<div class="card empty">No matches.</div>`;return;}
+  box.innerHTML=songs.map(s=>`
+    <div class="card">
+      <div class="song-row">
+        <div class="song-main">
+          <strong>${esc(s.title)}</strong>
+          <small>${esc(s.artist)}</small>
+          <div>
+            ${s.ourJam?`<span class="tag">👯‍♀️ Our Jam</span>`:''}
+            ${(s.sourcePlaylists||[]).map(p=>`<span class="tag">🎧 ${esc(p)}</span>`).join('')}
+            ${(s.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+          </div>
+          <div class="song-meta">
+            <span>Sung ${s.count||0}×</span>
+            <span>Last: ${fmtDate(s.lastSung)}</span>
+          </div>
+        </div>
+        <button class="icon-btn ${s.favorite?'fav':''}" onclick="toggleFavorite('${s.id}')" title="My Jam">★</button>
+      </div>
+      <div class="btn-row">
+        <button class="ghost-btn" onclick="queueSong('${s.id}')">+ Queue</button>
+        <button class="ghost-btn" onclick="editSong('${s.id}')">Edit</button>
+        <button class="primary-btn" onclick="performanceDialog('${s.id}')">Sang It</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderHistory(){
+  const box=document.getElementById('historyList');
+  if(!state.performances.length){
+    box.innerHTML=`<div class="card empty">Your performance history is empty. Once the curtain rises, your songs will appear here.</div>`;return;
+  }
+  const groups={};
+  [...state.performances].sort((a,b)=>new Date(b.sungAt)-new Date(a.sungAt)).forEach(p=>{
+    const key=new Date(p.sungAt).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    (groups[key] ||= []).push(p);
+  });
+  box.innerHTML=Object.entries(groups).map(([date,items])=>`
+    <div class="history-date">${date}</div>
+    ${items.map(p=>{
+      const s=getSong(p.songId); if(!s)return '';
+      return `<div class="card song-row">
+        <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
+        <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
+        ${s.favorite?'<div class="fav">★</div>':''}
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+function openModal(html){
+  document.getElementById('modalSheet').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+
+function startNightDialog(){
+  if(activeSession()){ switchScreen('tonightScreen'); return; }
+  openModal(`
+    <h3>Start Tonight's Show 🎤</h3>
+    <p>Name it if you want—venue, event, or just "Karaoke Night."</p>
+    <label>Night name</label>
+    <input id="nightName" value="Karaoke Night" />
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="closeModal()">Cancel</button>
+      <button class="primary-btn" onclick="startNight()">Start night</button>
+    </div>`);
+}
+function startNight(){
+  const name=(document.getElementById('nightName').value||'Karaoke Night').trim();
+  const session={id:crypto.randomUUID(),name,startedAt:new Date().toISOString(),endedAt:null};
+  state.sessions.push(session);state.activeSessionId=session.id;state.queue=[];closeModal();renderAll();switchScreen('tonightScreen');
+}
+function endNight(){
+  const session=activeSession(); if(!session)return;
+  session.endedAt=new Date().toISOString();state.activeSessionId=null;state.queue=[];renderAll();switchScreen('homeScreen');
+}
+function ensureSession(){
+  if(activeSession()) return true;
+  startNightDialog(); return false;
+}
+function queueSong(id){
+  if(!ensureSession())return;
+  if(!state.queue.includes(id))state.queue.push(id);
+  renderAll();
+}
+function removeFromQueue(id){state.queue=state.queue.filter(x=>x!==id);renderAll();}
+function performanceDialog(id){
+  if(!ensureSession())return;
+  const s=getSong(id); if(!s)return;
+  const companionOption = state.companion.enabled
+    ? `<button class="lavender-btn" onclick="markSung('${id}','companion')">🎤 ${esc(state.companion.name)}</button>
+       <button class="purple-btn" onclick="markSung('${id}','together')">👯‍♀️ Together</button>`
+    : '';
+  openModal(`
+    <h3>Who sang it?</h3>
+    <div class="pick-card"><div class="big">${esc(s.title)}</div><div class="artist">${esc(s.artist)}</div></div>
+    <div class="btn-row">
+      <button class="primary-btn" onclick="markSung('${id}','me')">🎤 Me</button>
+      ${companionOption}
+    </div>
+    ${state.companion.enabled?'':`<div class="tiny" style="margin-top:12px">Add a Companion Singer from Home to log duets and shared performances.</div>`}
+  `);
+}
+function markSung(id, performer='me'){
+  if(!ensureSession())return;
+  const s=getSong(id);if(!s)return;
+  const now=new Date().toISOString(), session=activeSession();
+  s.count=(s.count||0)+1;s.lastSung=now;
+  state.performances.push({id:crypto.randomUUID(),songId:id,sessionId:session.id,sessionName:session.name,sungAt:now,performer});
+  state.queue=state.queue.filter(x=>x!==id);
+  renderAll();
+  openModal(`<h3>Logged 🎤</h3><div class="pick-card"><div class="big">${esc(s.title)}</div><div class="artist">${esc(s.artist)}</div><div class="reason">You've now sung this <strong>${s.count} time${s.count===1?'':'s'}</strong>.</div></div><button class="primary-btn" style="width:100%" onclick="closeModal()">Nice</button>`);
+}
+function toggleFavorite(id){const s=getSong(id);if(s){s.favorite=!s.favorite;renderAll();}}
+
+function companionDialog(){
+  openModal(`
+    <h3>👯‍♀️ Companion Singer</h3>
+    <p>Add the person you sing with most. This lets you track duets, shared favorites, and who actually performed each song.</p>
+    <label>Companion name</label>
+    <input id="companionName" value="${esc(state.companion.name||'Erica')}" />
+    <div class="checkbox-row">
+      <input type="checkbox" id="companionEnabled" ${state.companion.enabled?'checked':''}>
+      <label for="companionEnabled" style="margin:0">Use Companion Singer mode</label>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="closeModal()">Cancel</button>
+      <button class="primary-btn" onclick="saveCompanion()">Save</button>
+    </div>
+  `);
+}
+function saveCompanion(){
+  state.companion.name=(document.getElementById('companionName').value||'Erica').trim();
+  state.companion.enabled=document.getElementById('companionEnabled').checked;
+  closeModal(); renderAll();
+}
+function addSongDialog(){
+  openModal(`
+    <h3>Add a karaoke song</h3>
+    <p>Start simple. You can add tags and notes now or later.</p>
+    <label>Song title</label><input id="newTitle" placeholder="Song title" />
+    <label>Artist</label><input id="newArtist" placeholder="Artist" />
+    <label>Tags <span class="tiny">(comma separated)</span></label><input id="newTags" placeholder="90s, Rock, Crowd Song" />
+    <div class="checkbox-row"><input type="checkbox" id="newFav"><label for="newFav" style="margin:0">❤️ Add to My Jam</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="newOurJam"><label for="newOurJam" style="margin:0">👯‍♀️ Add to Our Jam</label></div>
+    <label>Notes</label><textarea id="newNotes" placeholder="Key change, great closer, duet partner, etc."></textarea>
+    <div class="btn-row"><button class="ghost-btn" onclick="closeModal()">Cancel</button><button class="primary-btn" onclick="saveNewSong()">Add song</button></div>
+  `);
+}
+function saveNewSong(){
+  const title=document.getElementById('newTitle').value.trim();
+  const artist=document.getElementById('newArtist').value.trim();
+  if(!title||!artist){alert('Add both a song title and artist.');return;}
+  state.songs.push({
+    id:crypto.randomUUID(),title,artist,favorite:document.getElementById('newFav').checked,ourJam:document.getElementById('newOurJam').checked,sourcePlaylists:['Manual'],
+    tags:document.getElementById('newTags').value.split(',').map(x=>x.trim()).filter(Boolean),
+    notes:document.getElementById('newNotes').value.trim(),count:0,lastSung:null
+  });
+  closeModal();renderAll();
+}
+function editSong(id){
+  const s=getSong(id); if(!s)return;
+  openModal(`
+    <h3>Edit song</h3>
+    <label>Song title</label><input id="editTitle" value="${esc(s.title)}" />
+    <label>Artist</label><input id="editArtist" value="${esc(s.artist)}" />
+    <label>Tags</label><input id="editTags" value="${esc((s.tags||[]).join(', '))}" />
+    <div class="checkbox-row"><input type="checkbox" id="editFav" ${s.favorite?'checked':''}><label for="editFav" style="margin:0">❤️ My Jam</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="editOurJam" ${s.ourJam?'checked':''}><label for="editOurJam" style="margin:0">👯‍♀️ Our Jam</label></div>
+    <label>Notes</label><textarea id="editNotes">${esc(s.notes||'')}</textarea>
+    <div class="btn-row">
+      <button class="danger-btn" onclick="deleteSong('${s.id}')">Delete</button>
+      <button class="ghost-btn" onclick="closeModal()">Cancel</button>
+      <button class="primary-btn" onclick="saveEdit('${s.id}')">Save</button>
+    </div>`);
+}
+function saveEdit(id){
+  const s=getSong(id);if(!s)return;
+  s.title=document.getElementById('editTitle').value.trim()||s.title;
+  s.artist=document.getElementById('editArtist').value.trim()||s.artist;
+  s.tags=document.getElementById('editTags').value.split(',').map(x=>x.trim()).filter(Boolean);
+  s.favorite=document.getElementById('editFav').checked;
+  s.ourJam=document.getElementById('editOurJam').checked;
+  s.notes=document.getElementById('editNotes').value.trim();
+  closeModal();renderAll();
+}
+function deleteSong(id){
+  state.songs=state.songs.filter(s=>s.id!==id);
+  state.queue=state.queue.filter(x=>x!==id);
+  closeModal();renderAll();
+}
+
+function pickRoulette(){
+  if(!state.songs.length){addSongDialog();return;}
+  const pool=state.songs.filter(s=>!state.queue.includes(s.id));
+  const weighted=[];
+  (pool.length?pool:state.songs).forEach(s=>{
+    const days=s.lastSung ? (Date.now()-new Date(s.lastSung))/(1000*60*60*24) : 999;
+    const weight = s.count===0 ? 5 : days>60 ? 4 : days>30 ? 3 : days>14 ? 2 : 1;
+    for(let i=0;i<weight;i++) weighted.push(s);
+  });
+  const s=weighted[Math.floor(Math.random()*weighted.length)];
+  showSongPick('🎲 Karaoke Roulette',s,`You've sung this ${s.count||0} time${s.count===1?'':'s'}. Last sung: ${fmtDate(s.lastSung)}.`);
+}
+function pickMyJam(){
+  const pool=state.songs.filter(s=>s.favorite);
+  if(!pool.length){openModal(`<h3>❤️ My Jam</h3><p>You haven't marked any favorites yet. Tap ★ on songs you love to sing.</p><button class="primary-btn" style="width:100%" onclick="closeModal();switchScreen('songsScreen')">Choose My Jams</button>`);return;}
+  const available=pool.filter(s=>!state.queue.includes(s.id));
+  const s=(available.length?available:pool)[Math.floor(Math.random()*(available.length?available:pool).length)];
+  showSongPick('❤️ My Jam',s,`One of your go-to songs. You've sung it ${s.count||0} time${s.count===1?'':'s'}.`);
+}
+function pickKamikaze(){
+  const libraryKeys=new Set(state.songs.map(s=>`${s.title}|${s.artist}`.toLowerCase()));
+  const pool=kamikazePool.filter(k=>!libraryKeys.has(`${k.title}|${k.artist}`.toLowerCase()));
+  const k=(pool.length?pool:kamikazePool)[Math.floor(Math.random()*(pool.length?pool:kamikazePool).length)];
+  openModal(`
+    <h3>💣 Kamikaze Karaoke</h3>
+    <p>A song that's not currently in your library.</p>
+    <div class="pick-card">
+      <div class="big">${esc(k.title)}</div><div class="artist">${esc(k.artist)}</div>
+      <div class="reason">${esc(k.reason)}</div>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="pickKamikaze()">Nope 😂</button>
+      <button class="ghost-btn" onclick="addKamikaze('${esc(k.title)}','${esc(k.artist)}')">+ Add to songs</button>
+    </div>
+    <button class="primary-btn" style="width:100%;margin-top:9px" onclick="acceptKamikaze('${esc(k.title)}','${esc(k.artist)}')">Accept the challenge</button>
+  `);
+}
+function addKamikaze(title,artist){
+  const existing=state.songs.find(s=>s.title===title&&s.artist===artist);
+  if(!existing) state.songs.push({id:crypto.randomUUID(),title,artist,favorite:false,ourJam:false,tags:['Kamikaze Find'],sourcePlaylists:['Kamikaze Find'],count:0,lastSung:null,notes:''});
+  closeModal();renderAll();
+}
+function acceptKamikaze(title,artist){
+  let s=state.songs.find(x=>x.title===title&&x.artist===artist);
+  if(!s){
+    s={id:crypto.randomUUID(),title,artist,favorite:false,ourJam:false,tags:['Kamikaze Find'],sourcePlaylists:['Kamikaze Find'],count:0,lastSung:null,notes:''};
+    state.songs.push(s);
+  }
+  if(!ensureSession())return;
+  if(!state.queue.includes(s.id))state.queue.push(s.id);
+  closeModal();renderAll();switchScreen('tonightScreen');
+}
+function showSongPick(title,s,reason){
+  openModal(`
+    <h3>${title}</h3>
+    <div class="pick-card">
+      <div class="big">${esc(s.title)}</div><div class="artist">${esc(s.artist)}</div>
+      <div class="reason">${esc(reason)}</div>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="${title.includes('My Jam')?'pickMyJam()':'pickRoulette()'}">Spin again</button>
+      <button class="primary-btn" onclick="queueSong('${s.id}');closeModal();switchScreen('tonightScreen')">Add to queue</button>
+    </div>`);
+}
+
+document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchScreen(b.dataset.screen)));
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  const m=b.dataset.mode;
+  if(m==='roulette')pickRoulette();
+  if(m==='kamikaze')pickKamikaze();
+  if(m==='myjam')pickMyJam();
+}));
+document.getElementById('startNightBtn').addEventListener('click',startNightDialog);
+document.getElementById('endNightBtn').addEventListener('click',endNight);
+document.getElementById('addSongBtn').addEventListener('click',addSongDialog);
+document.getElementById('companionBtn').addEventListener('click',companionDialog);
+document.getElementById('browseSongsBtn').addEventListener('click',()=>switchScreen('songsScreen'));
+document.getElementById('quickRouletteBtn').addEventListener('click',pickRoulette);
+document.getElementById('songSearch').addEventListener('input',renderSongs);
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+renderAll();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
