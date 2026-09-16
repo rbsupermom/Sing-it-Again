@@ -6,7 +6,14 @@
 <meta name="theme-color" content="#1d1328" />
 <title>Sing It Again! — Karaoke Tracker</title>
 <style>
-  :root{
+  @font-face {
+  font-family: 'SingItAgainScript';
+  src: url('./LobsterTwo-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root{
     --bg:#13090a;
     --panel:#261112;
     --panel2:#3a1718;
@@ -222,10 +229,12 @@
   }
   .marquee h1{
     margin:0;
-    font-size:1.46rem;
-    letter-spacing:-.03em;
+    font-size:1.68rem;
+    letter-spacing:.01em;
     line-height:1.05;
     color:#f6e7c4;
+    font-family:'SingItAgainScript', 'Brush Script MT', 'Segoe Script', cursive;
+    font-weight:normal;
   }
   .marquee-bulb{
     display:none;
@@ -281,6 +290,185 @@
   .history-date{font-size:.78rem;color:var(--muted);margin:15px 2px 7px;font-weight:800}
   .topline{display:flex;justify-content:space-between;gap:10px;align-items:center}
   .small-action{font-size:.76rem;padding:7px 9px}
+  .rotation-card{
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,232,175,.07), transparent 30%),
+      linear-gradient(180deg, rgba(54,18,18,.98), rgba(31,11,12,.98));
+    border:1px solid rgba(212,166,77,.28);
+    border-radius:22px;
+    padding:17px;
+    box-shadow:var(--shadow);
+    margin-bottom:14px;
+  }
+  .rotation-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .rotation-head h3{margin:0 0 3px;color:#f1ddb3;font-size:1rem}
+  .rotation-status{
+    padding:6px 9px;
+    border-radius:999px;
+    background:rgba(212,166,77,.09);
+    border:1px solid rgba(212,166,77,.22);
+    color:#f3deba;
+    font-size:.69rem;
+    font-weight:900;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .rotation-main{
+    display:grid;
+    grid-template-columns:1.05fr .95fr;
+    gap:10px;
+    align-items:stretch;
+  }
+  .rotation-count-panel,.rotation-wait-panel{
+    background:rgba(0,0,0,.14);
+    border:1px solid rgba(212,166,77,.13);
+    border-radius:18px;
+    padding:13px;
+    text-align:center;
+  }
+  .rotation-number{
+    font-size:2.45rem;
+    line-height:1;
+    font-weight:950;
+    color:#f8e6be;
+    margin:5px 0 4px;
+  }
+  .rotation-label{color:var(--muted);font-size:.73rem}
+  .rotation-wait{
+    font-size:1.48rem;
+    line-height:1.1;
+    font-weight:900;
+    color:#f0cf83;
+    margin:9px 0 5px;
+  }
+  .rotation-controls{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-top:10px;
+  }
+  .rotation-control-btn{
+    border-radius:14px;
+    padding:11px 12px;
+    font-weight:900;
+    border:1px solid rgba(212,166,77,.23);
+    background:#4c191b;
+    color:#f7ead5;
+  }
+  .rotation-details{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid rgba(212,166,77,.13);
+  }
+  .rotation-detail-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:5px 0;
+    font-size:.8rem;
+  }
+  .rotation-detail-row span:first-child{color:var(--muted)}
+  .rotation-detail-row strong{
+    text-align:right;
+    color:#f7e6c6;
+    max-width:64%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rotation-select{
+    width:auto;
+    min-width:84px;
+    padding:7px 9px;
+    border-radius:10px;
+    background:#4a1b1d;
+    color:#f7efe1;
+    border:1px solid rgba(212,166,77,.18);
+  }
+  .theme-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 10px;
+    margin-top:8px;
+    border-radius:999px;
+    background:rgba(212,166,77,.10);
+    border:1px solid rgba(212,166,77,.28);
+    color:#f6dfad;
+    font-size:.76rem;
+    font-weight:900;
+  }
+  .theme-mode-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin:14px 0;
+  }
+  .theme-mode-card{
+    border:1px solid rgba(212,166,77,.24);
+    background:linear-gradient(180deg,rgba(75,22,22,.96),rgba(42,13,14,.98));
+    color:var(--text);
+    border-radius:18px;
+    padding:15px;
+    text-align:left;
+  }
+  .theme-mode-card .theme-icon{
+    font-size:1.55rem;
+    display:block;
+    margin-bottom:8px;
+  }
+  .theme-mode-card strong{
+    display:block;
+    color:#f4dfb6;
+    margin-bottom:4px;
+  }
+  .theme-mode-card span{
+    color:var(--muted);
+    font-size:.77rem;
+    line-height:1.35;
+  }
+  .theme-list{
+    display:grid;
+    gap:8px;
+    margin-top:10px;
+    max-height:48vh;
+    overflow:auto;
+    padding-right:2px;
+  }
+  .theme-option{
+    width:100%;
+    text-align:left;
+    border:1px solid rgba(212,166,77,.18);
+    background:rgba(66,20,21,.92);
+    color:var(--text);
+    border-radius:15px;
+    padding:11px 12px;
+  }
+  .theme-option strong{
+    display:block;
+    color:#f5dfb4;
+    margin-bottom:2px;
+  }
+  .theme-option small{
+    color:var(--muted);
+    line-height:1.3;
+  }
+  .theme-active-card{
+    border:1px solid rgba(212,166,77,.28);
+    background:rgba(212,166,77,.07);
+    border-radius:17px;
+    padding:12px;
+    margin:12px 0;
+  }
+  .theme-active-card strong{color:#f4dda9}
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -342,6 +530,11 @@
           <strong>Pick My Own</strong>
           <span>Browse your full karaoke library.</span>
         </button>
+        <button class="mode full" id="themeNightBtn">
+          <span class="emoji">🎭</span>
+          <strong>Theme Night</strong>
+          <span id="themeModeText">Choose the night's theme—or let Theme Roulette decide.</span>
+        </button>
         <button class="mode full" id="companionBtn">
           <span class="emoji">👯‍♀️</span>
           <strong>Companion Singer</strong>
@@ -371,12 +564,58 @@
         <div class="topline">
           <div>
             <h2 style="margin-bottom:3px">Tonight's Show</h2>
-            <p id="tonightLabel">No show started yet.</p><div id="tonightCompanion"></div>
+            <p id="tonightLabel">No show started yet.</p>
+            <div id="tonightCompanion"></div>
+            <div id="tonightTheme"></div>
           </div>
           <button class="ghost-btn small-action" id="endNightBtn" style="display:none">End night</button>
         </div>
         <div class="btn-row">
           <button class="primary-btn" id="quickRouletteBtn">🎲 🎭 Pick my next number</button>
+          <button class="ghost-btn" id="quickThemeBtn">🎭 Theme Night</button>
+        </div>
+      </div>
+
+      <div class="rotation-card" id="rotationTracker">
+        <div class="rotation-head">
+          <div>
+            <h3>🎭 My Rotation</h3>
+            <div class="tiny">Keep track of how many singers are ahead of you.</div>
+          </div>
+          <div class="rotation-status" id="rotationStatus">Waiting</div>
+        </div>
+
+        <div class="rotation-main">
+          <div class="rotation-count-panel">
+            <div class="rotation-label">Singers ahead</div>
+            <div class="rotation-number" id="rotationAhead">0</div>
+            <div class="rotation-label">in the current rotation</div>
+          </div>
+          <div class="rotation-wait-panel">
+            <div class="rotation-label">Estimated wait</div>
+            <div class="rotation-wait" id="rotationWait">Now</div>
+            <div class="rotation-label" id="rotationWaitNote">approximate</div>
+          </div>
+        </div>
+
+        <div class="rotation-controls">
+          <button class="rotation-control-btn" onclick="changeRotationAhead(-1)">− One singer</button>
+          <button class="rotation-control-btn" onclick="changeRotationAhead(1)">+ One singer</button>
+        </div>
+
+        <div class="rotation-details">
+          <div class="rotation-detail-row">
+            <span>My next song</span>
+            <strong id="rotationNextSong">Nothing queued yet</strong>
+          </div>
+          <div class="rotation-detail-row">
+            <span>Average turn</span>
+            <select class="rotation-select" id="rotationAverage" onchange="setRotationAverage(this.value)">
+              <option value="3">3 min</option>
+              <option value="4">4 min</option>
+              <option value="5">5 min</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -447,6 +686,48 @@ const kamikazePool = [
   {title:'The Story', artist:'Brandi Carlile', reason:'Starts controlled and gives you a big vocal payoff—good if you like songs that build.'},
   {title:'Stronger (What Doesn’t Kill You)', artist:'Kelly Clarkson', reason:'High-energy crowd song with a strong belt-friendly chorus.'}
 ];
+
+
+const THEME_LIBRARY = [
+  {name:'70s Disco', emoji:'🪩', description:'Disco, funk, and dance-floor classics.'},
+  {name:'80s Icons', emoji:'⚡', description:'Big hooks, big hair, unmistakable 80s.'},
+  {name:'90s Throwback', emoji:'📼', description:'Country, pop, rock, and alternative from the 90s.'},
+  {name:'Y2K / 2000s', emoji:'💿', description:'Turn-of-the-century pop, rock, and country.'},
+  {name:'Country Classics', emoji:'🤠', description:'Country favorites that always work at karaoke.'},
+  {name:'Women of Country', emoji:'👢', description:'The women who own the country karaoke stage.'},
+  {name:'Modern Country', emoji:'🌾', description:'Newer country favorites and crossover hits.'},
+  {name:'Rock the House', emoji:'🎸', description:'Rock songs built for a live room.'},
+  {name:'Classic Rock', emoji:'🔥', description:'Legendary rock songs and arena-sized choruses.'},
+  {name:'90s Rock & Alternative', emoji:'🖤', description:'Alternative, grunge, and 90s rock energy.'},
+  {name:'Power Ballads', emoji:'🌟', description:'Slow build, huge chorus, full dramatic commitment.'},
+  {name:'Powerhouse Vocals', emoji:'🎙️', description:'Songs that let the voice take center stage.'},
+  {name:'Heartbreak Hotel', emoji:'💔', description:'Songs for heartbreak, regret, and complicated feelings.'},
+  {name:'Breakup Anthems', emoji:'✂️', description:'The relationship is over. The chorus is not.'},
+  {name:'Love Songs', emoji:'❤️', description:'Romance, devotion, and songs worth dedicating.'},
+  {name:'Girl Power', emoji:'💪', description:'Confident, fearless, sing-it-like-you-mean-it songs.'},
+  {name:'Badass Anthems', emoji:'🔥', description:'Songs with swagger, attitude, and zero apologies.'},
+  {name:'Duet Night', emoji:'👯‍♀️', description:'Grab Erica—or another partner—and share the stage.'},
+  {name:'Movie Soundtracks', emoji:'🎬', description:'Songs made famous by movies and iconic scenes.'},
+  {name:'Broadway & Musicals', emoji:'🎭', description:'Musical theatre, show tunes, and dramatic numbers.'},
+  {name:'Guilty Pleasures', emoji:'😈', description:'You know every word. You are not explaining yourself.'},
+  {name:'One-Hit Wonders', emoji:'⭐', description:'One huge song is all it takes.'},
+  {name:'Crowd Singalongs', emoji:'🙌', description:'Songs the whole room wants to sing with you.'},
+  {name:'Story Songs', emoji:'📖', description:'Songs that tell a complete story from start to finish.'},
+  {name:'Road Trip', emoji:'🚗', description:'Windows down, volume up, sing-every-word energy.'},
+  {name:'Summer Vibes', emoji:'☀️', description:'Bright, fun, warm-weather songs.'},
+  {name:'Soulful & Acoustic', emoji:'🕯️', description:'Strip it back and let the lyric and vocal carry it.'},
+  {name:'Legends Only', emoji:'👑', description:'Songs by artists who earned icon status.'},
+  {name:'Sad Songs', emoji:'🥀', description:'Sometimes karaoke is cheaper than therapy.'},
+  {name:'Songs Everyone Knows', emoji:'🎶', description:'Immediate recognition from the first few notes.'},
+  {name:'New-to-Me Night', emoji:'🆕', description:'Prioritize songs you have not sung before.'},
+  {name:'Names in the Title', emoji:'🏷️', description:'Songs with a person’s name right in the title.'},
+  {name:'Places & Travel', emoji:'🗺️', description:'Cities, states, roads, destinations, and going somewhere.'},
+  {name:'Colors', emoji:'🎨', description:'Songs with a color in the title, lyric, or identity.'},
+  {name:'Ladies Night', emoji:'✨', description:'Songs by women, for a full night of female artists.'},
+  {name:'Big Finish', emoji:'🎆', description:'Every song should feel like a closing number.'}
+];
+
+let pendingThemeSelection = null;
 
 function defaultState(){
   return {
@@ -531,6 +812,10 @@ function renderHome(){
   document.getElementById('companionModeText').textContent = state.companion.enabled
     ? `${state.companion.name} is linked for duets, shared jams, and together performances.`
     : 'Add your karaoke partner for duets, shared jams, and together performances.';
+  const currentTheme = activeSession()?.theme;
+  document.getElementById('themeModeText').textContent = currentTheme
+    ? `Tonight's theme: ${currentTheme}`
+    : 'Choose the night\'s theme—or let Theme Roulette decide.';
 
   const session = activeSession();
   const homeGreeting = document.getElementById('homeGreeting');
@@ -553,17 +838,101 @@ function renderHome(){
     if(!s) return '';
     return `<div class="card song-row">
       <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
-      <div class="song-meta"><span>${fmtDate(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span></div></div>
+      <div class="song-meta"><span>${fmtDate(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}</div></div>
       ${s.favorite?'<div class="fav">★</div>':''}
     </div>`;
   }).join('');
 }
 
+function ensureRotation(session){
+  if(!session) return null;
+  if(!session.rotation){
+    session.rotation={singersAhead:0,avgMinutes:4};
+  }
+  if(!Number.isFinite(Number(session.rotation.singersAhead))) session.rotation.singersAhead=0;
+  if(!Number.isFinite(Number(session.rotation.avgMinutes))) session.rotation.avgMinutes=4;
+  session.rotation.singersAhead=Math.max(0,Math.round(Number(session.rotation.singersAhead)));
+  session.rotation.avgMinutes=Math.max(1,Number(session.rotation.avgMinutes));
+  return session.rotation;
+}
+
+function changeRotationAhead(delta){
+  const session=activeSession();
+  if(!session){
+    startNightDialog();
+    return;
+  }
+  const rotation=ensureRotation(session);
+  rotation.singersAhead=Math.max(0,rotation.singersAhead+Number(delta||0));
+  save();
+  renderTonight();
+}
+
+function setRotationAverage(value){
+  const session=activeSession();
+  if(!session) return;
+  const rotation=ensureRotation(session);
+  rotation.avgMinutes=Math.max(1,Number(value)||4);
+  save();
+  renderTonight();
+}
+
+function renderRotation(session){
+  const aheadEl=document.getElementById('rotationAhead');
+  const waitEl=document.getElementById('rotationWait');
+  const waitNoteEl=document.getElementById('rotationWaitNote');
+  const statusEl=document.getElementById('rotationStatus');
+  const avgEl=document.getElementById('rotationAverage');
+  const nextSongEl=document.getElementById('rotationNextSong');
+  if(!aheadEl || !waitEl || !statusEl || !avgEl || !nextSongEl) return;
+
+  if(!session){
+    aheadEl.textContent='—';
+    waitEl.textContent='Start show';
+    waitNoteEl.textContent='to track rotation';
+    statusEl.textContent='Not started';
+    avgEl.value='4';
+    nextSongEl.textContent='Nothing queued yet';
+    return;
+  }
+
+  const rotation=ensureRotation(session);
+  const ahead=rotation.singersAhead;
+  const minutes=ahead*rotation.avgMinutes;
+
+  aheadEl.textContent=ahead;
+  avgEl.value=String(rotation.avgMinutes);
+
+  if(ahead===0){
+    waitEl.textContent='Now';
+    waitNoteEl.textContent='you’re up';
+    statusEl.textContent="You're up";
+  } else if(ahead===1){
+    waitEl.textContent=`~${minutes} min`;
+    waitNoteEl.textContent='approximate';
+    statusEl.textContent='On deck';
+  } else if(ahead<=3){
+    waitEl.textContent=`~${minutes} min`;
+    waitNoteEl.textContent='approximate';
+    statusEl.textContent='Getting close';
+  } else {
+    waitEl.textContent=`~${minutes} min`;
+    waitNoteEl.textContent='approximate';
+    statusEl.textContent='Waiting';
+  }
+
+  const nextSong=state.queue.length ? getSong(state.queue[0]) : null;
+  nextSongEl.textContent=nextSong ? `${nextSong.title} — ${nextSong.artist}` : 'Nothing queued yet';
+}
+
 function renderTonight(){
   const session=activeSession();
+  renderRotation(session);
   document.getElementById('tonightLabel').textContent = session ? `${session.name} · started ${fmtTime(session.startedAt)}` : 'No show started yet.';
   document.getElementById('tonightCompanion').innerHTML = state.companion.enabled
     ? `<span class="companion-chip">👯‍♀️ ${esc(state.companion.name)} singing with you</span>` : '';
+  document.getElementById('tonightTheme').innerHTML = session?.theme
+    ? `<span class="theme-badge">🎭 Theme: ${esc(session.theme)}</span>` : '';
   document.getElementById('endNightBtn').style.display = session ? '' : 'none';
 
   const queueBox=document.getElementById('queueList');
@@ -649,7 +1018,7 @@ function renderHistory(){
       const s=getSong(p.songId); if(!s)return '';
       return `<div class="card song-row">
         <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
-        <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
+        <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
         ${s.favorite?'<div class="fav">★</div>':''}
       </div>`;
     }).join('')}
@@ -662,21 +1031,147 @@ function openModal(html){
 }
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 
+
+function getThemeByName(name){
+  return THEME_LIBRARY.find(t=>t.name===name) || {name,emoji:'🎭',description:'Custom theme for tonight.'};
+}
+
+function themeNightDialog(){
+  const session=activeSession();
+  const activeTheme=session?.theme || null;
+  openModal(`
+    <h3>🎭 Theme Night</h3>
+    <p>Set the vibe for tonight. The theme is just for fun—it won't restrict what you can sing.</p>
+    ${activeTheme ? `<div class="theme-active-card"><strong>Tonight's theme:</strong> ${esc(activeTheme)}</div>` : ''}
+    <div class="theme-mode-grid">
+      <button class="theme-mode-card" onclick="chooseThemeDialog()">
+        <span class="theme-icon">🔎</span>
+        <strong>Choose a Theme</strong>
+        <span>Search the theme list or create your own.</span>
+      </button>
+      <button class="theme-mode-card" onclick="themeRoulette()">
+        <span class="theme-icon">🎲</span>
+        <strong>Theme Roulette</strong>
+        <span>Let Sing It Again! choose the night's theme.</span>
+      </button>
+    </div>
+    ${activeTheme ? `<button class="danger-btn" style="width:100%" onclick="clearTheme()">Clear Tonight's Theme</button>` : ''}
+  `);
+}
+
+function chooseThemeDialog(){
+  openModal(`
+    <h3>🔎 Choose a Theme</h3>
+    <p>Search by decade, mood, genre, or just something fun.</p>
+    <input class="search" id="themeSearch" placeholder="Search themes…" oninput="renderThemeChoices(this.value)" />
+    <div id="themeChoiceList" class="theme-list"></div>
+  `);
+  renderThemeChoices('');
+  setTimeout(()=>document.getElementById('themeSearch')?.focus(),50);
+}
+
+function renderThemeChoices(query=''){
+  const list=document.getElementById('themeChoiceList');
+  if(!list) return;
+  const q=String(query).trim().toLowerCase();
+  const matches=THEME_LIBRARY.filter(t =>
+    !q || `${t.name} ${t.description}`.toLowerCase().includes(q)
+  );
+
+  const builtIns=matches.map(t=>`
+    <button class="theme-option" onclick="activateTheme('${t.name.replace(/'/g,"\\'")}')">
+      <strong>${t.emoji} ${esc(t.name)}</strong>
+      <small>${esc(t.description)}</small>
+    </button>
+  `).join('');
+
+  const custom=q
+    ? `<button class="theme-option" onclick="activateCustomThemeFromSearch()">
+         <strong>✨ Use "${esc(query)}" as my theme</strong>
+         <small>Create a custom theme exactly as you typed it.</small>
+       </button>`
+    : '';
+
+  list.innerHTML=(builtIns || `<div class="empty">No built-in themes matched.</div>`) + custom;
+}
+
+function activateCustomThemeFromSearch(){
+  const value=(document.getElementById('themeSearch')?.value || '').trim();
+  if(value) activateTheme(value);
+}
+
+function themeRoulette(){
+  const current=activeSession()?.theme || pendingThemeSelection;
+  let pool=THEME_LIBRARY.filter(t=>t.name!==current);
+  if(!pool.length) pool=THEME_LIBRARY;
+  const theme=pool[Math.floor(Math.random()*pool.length)];
+  openModal(`
+    <h3>🎲 Theme Roulette</h3>
+    <div class="pick-card">
+      <div class="big">${theme.emoji} ${esc(theme.name)}</div>
+      <div class="reason">${esc(theme.description)}</div>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="themeRoulette()">Spin Again</button>
+      <button class="primary-btn" onclick="activateTheme('${theme.name.replace(/'/g,"\\'")}')">Use This Theme</button>
+    </div>
+    <button class="ghost-btn" style="width:100%;margin-top:9px" onclick="chooseThemeDialog()">Choose Myself Instead</button>
+  `);
+}
+
+function activateTheme(name){
+  const clean=String(name||'').trim();
+  if(!clean) return;
+  const session=activeSession();
+  if(session){
+    session.theme=clean;
+    closeModal();
+    renderAll();
+    switchScreen('tonightScreen');
+    return;
+  }
+  pendingThemeSelection=clean;
+  closeModal();
+  startNightDialog();
+}
+
+function clearTheme(){
+  const session=activeSession();
+  if(session) session.theme=null;
+  pendingThemeSelection=null;
+  closeModal();
+  renderAll();
+}
+
+function cancelStartNight(){
+  pendingThemeSelection=null;
+  closeModal();
+}
+
 function startNightDialog(){
   if(activeSession()){ switchScreen('tonightScreen'); return; }
   openModal(`
     <h3>Start Tonight's Show 🎤</h3>
     <p>Name it if you want—venue, event, or just "Karaoke Night."</p>
+    ${pendingThemeSelection ? `<div class="theme-active-card"><strong>Theme:</strong> ${esc(pendingThemeSelection)}</div>` : ''}
     <label>Night name</label>
     <input id="nightName" value="Karaoke Night" />
     <div class="btn-row">
-      <button class="ghost-btn" onclick="closeModal()">Cancel</button>
+      <button class="ghost-btn" onclick="cancelStartNight()">Cancel</button>
       <button class="primary-btn" onclick="startNight()">Start night</button>
     </div>`);
 }
 function startNight(){
   const name=(document.getElementById('nightName').value||'Karaoke Night').trim();
-  const session={id:crypto.randomUUID(),name,startedAt:new Date().toISOString(),endedAt:null};
+  const session={
+    id:crypto.randomUUID(),
+    name,
+    startedAt:new Date().toISOString(),
+    endedAt:null,
+    rotation:{singersAhead:0,avgMinutes:4},
+    theme:pendingThemeSelection || null
+  };
+  pendingThemeSelection=null;
   state.sessions.push(session);state.activeSessionId=session.id;state.queue=[];closeModal();renderAll();switchScreen('tonightScreen');
 }
 function endNight(){
@@ -715,7 +1210,7 @@ function markSung(id, performer='me'){
   const s=getSong(id);if(!s)return;
   const now=new Date().toISOString(), session=activeSession();
   s.count=(s.count||0)+1;s.lastSung=now;
-  state.performances.push({id:crypto.randomUUID(),songId:id,sessionId:session.id,sessionName:session.name,sungAt:now,performer});
+  state.performances.push({id:crypto.randomUUID(),songId:id,sessionId:session.id,sessionName:session.name,sessionTheme:session.theme||null,sungAt:now,performer});
   state.queue=state.queue.filter(x=>x!==id);
   renderAll();
   openModal(`<h3>Logged 🎤</h3><div class="pick-card"><div class="big">${esc(s.title)}</div><div class="artist">${esc(s.artist)}</div><div class="reason">You've now sung this <strong>${s.count} time${s.count===1?'':'s'}</strong>.</div></div><button class="primary-btn" style="width:100%" onclick="closeModal()">Nice</button>`);
@@ -875,6 +1370,8 @@ document.getElementById('startNightBtn').addEventListener('click',startNightDial
 document.getElementById('endNightBtn').addEventListener('click',endNight);
 document.getElementById('addSongBtn').addEventListener('click',addSongDialog);
 document.getElementById('companionBtn').addEventListener('click',companionDialog);
+document.getElementById('themeNightBtn').addEventListener('click',themeNightDialog);
+document.getElementById('quickThemeBtn').addEventListener('click',themeNightDialog);
 document.getElementById('browseSongsBtn').addEventListener('click',()=>switchScreen('songsScreen'));
 document.getElementById('quickRouletteBtn').addEventListener('click',pickRoulette);
 document.getElementById('songSearch').addEventListener('input',renderSongs);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sing-it-again-v1';
+const CACHE_NAME = 'sing-it-again-v4-theme-night';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,35 +6,29 @@ const APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './LobsterTwo-Regular.otf'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
-
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
-    )
-  );
+  event.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+  ));
   self.clients.claim();
 });
-
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+    fetch(event.request)
+      .then(response => {
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
         return response;
-      }).catch(() => caches.match('./index.html'));
-    })
+      })
+      .catch(()=>caches.match(event.request).then(cached=>cached||caches.match('./index.html')))
   );
 });
