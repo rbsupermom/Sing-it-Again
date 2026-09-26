@@ -1,4 +1,5 @@
 import './singo.js';
+import {entryHistory, singoHistory, reconcileHistory} from './backstage-history.js';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup,
@@ -39,6 +40,18 @@ let inFlight = 0;
 let editingInvite = false;
 let accountPairId = null;
 let sharedPairId = null;
+const historyBatches = new Map();
+
+function syncPerformanceHistory() {
+  if (!ready || suppress || !user || !historyBatches.size) return;
+  const current = app.getState();
+  const next = reconcileHistory(current, [...historyBatches.values()]);
+  if (next !== current) app.setState(next);
+}
+function receiveHistory(batch) {
+  historyBatches.set(batch.scope, batch);
+  syncPerformanceHistory();
+}
 
 function notice(message, error = false) {
   status.textContent = message;
@@ -80,8 +93,10 @@ function useState(data) {
     if (user) storeLocal(user.uid, next);
   } finally { suppress = false; }
   if (ready && user) syncBackstage();
+  syncPerformanceHistory();
 }
 function stopPairListeners() {
+  historyBatches.clear();
   window.KaraokeSingo?.connect(null);
   pairListeners.forEach(stop => stop());
   pairListeners = [];
@@ -307,15 +322,35 @@ function listenPair(id) {
 }
 function subscribeShared(id) {
   sharedPairId = id;
-  window.KaraokeSingo?.connect({db,pairId:id,user,peerUid:peerUid(),peerName:peerName()});
+  const accountUid = user.uid;
+  window.KaraokeSingo?.connect({db,pairId:id,user,peerUid:peerUid(),peerName:peerName(),
+    onHistory: data => {
+      if (data && pairId === id && user?.uid === accountUid) receiveHistory(singoHistory(id, data, accountUid));
+    }});
+  pairListeners.push(onSnapshot(collection(db, 'pairs', id, 'singoArchive'), {includeMetadataChanges:true}, snapshot => {
+    if (pairId !== id || user?.uid !== accountUid || snapshot.metadata?.fromCache || snapshot.metadata?.hasPendingWrites) return;
+    for (const item of snapshot.docs) {
+      const batch = singoHistory(id, item.data(), accountUid, true);
+      historyBatches.set(batch.scope, batch);
+    }
+    syncPerformanceHistory();
+  }, fail));
   for (const [name, setter] of [
     ['messages', value => { messages = value; renderMessages(); }],
     ['challenges', value => { challenges = value; renderEntries('challenge'); }],
     ['duets', value => { duets = value; renderEntries('duet'); }]
   ]) {
-    const q = query(collection(db, 'pairs', id, name), orderBy('createdAt', 'desc'), limit(75));
-    pairListeners.push(onSnapshot(q, snapshot => {
-      if (pairId === id && user) setter(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    // Completed songs outside the 75-message display window still belong in History.
+    const q = name === 'messages'
+      ? query(collection(db, 'pairs', id, name), orderBy('createdAt', 'desc'), limit(75))
+      : query(collection(db, 'pairs', id, name), orderBy('createdAt', 'desc'));
+    pairListeners.push(onSnapshot(q, {includeMetadataChanges:true}, snapshot => {
+      if (pairId !== id || user?.uid !== accountUid) return;
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setter(items);
+      if (name !== 'messages' && !snapshot.metadata?.fromCache && !snapshot.metadata?.hasPendingWrites) {
+        receiveHistory(entryHistory(name === 'duets' ? 'duet' : 'challenge', id, items, accountUid));
+      }
     }, error => {
       partnerLabel.textContent = 'Backstage could not load your conversation. Refresh to reconnect.';
       fail(error);
@@ -545,7 +580,7 @@ async function updateEntry(kind, id, action) {
   }
   try {
     await updateDoc(doc(db, 'pairs', pairId, kind === 'challenge' ? 'challenges' : 'duets', id),
-      { status: action });
+      { status: action, ...(action === 'sung' ? {completedAt: serverTimestamp()} : {}) });
   } catch (error) { fail(error); }
 }
 

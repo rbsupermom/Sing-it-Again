@@ -855,6 +855,7 @@ function fmtDate(iso){
 function fmtTime(iso){
   return new Date(iso).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
 }
+function performanceSource(p){return (p.sourceLabel?`<span>${esc(p.sourceLabel)}</span>`:'')+(p.timeEstimated?'<span>Time estimated from Backstage record</span>':'');}
 function getSong(id){return state.songs.find(s=>s.id===id)}
 function activeSession(){return state.sessions.find(s=>s.id===state.activeSessionId)}
 
@@ -935,7 +936,7 @@ function renderHome(){
     if(!s) return '';
     return `<div class="card song-row">
       <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
-      <div class="song-meta"><span>${fmtDate(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}</div></div>
+      <div class="song-meta"><span>${fmtDate(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${performanceSource(p)}${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}</div></div>
       ${s.favorite?'<div class="fav">★</div>':''}
     </div>`;
   }).join('');
@@ -1061,7 +1062,7 @@ function renderTonight(){
     const s=getSong(p.songId); if(!s)return '';
     return `<div class="card song-row">
       <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
-      <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${s.count} lifetime</span>${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
+      <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${s.count} lifetime</span>${performanceSource(p)}${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
       <div class="sung-mark">SUNG</div>
     </div>`;
   }).join('') : `<div class="card empty">No performances logged tonight yet.</div>`;
@@ -1118,7 +1119,7 @@ function renderHistory(){
       const s=getSong(p.songId); if(!s)return '';
       return `<div class="card song-row">
         <div class="song-main"><strong>${esc(s.title)}</strong><small>${esc(s.artist)}</small>
-        <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
+        <div class="song-meta"><span>${fmtTime(p.sungAt)}</span><span>${esc(p.sessionName||'Karaoke')}</span>${performanceSource(p)}${p.sessionTheme?`<span>🎭 ${esc(p.sessionTheme)}</span>`:''}${p.performer==='together'?`<span>👯‍♀️ Together</span>`:''}${p.performer==='companion'?`<span>🎤 ${esc(state.companion.name)}</span>`:''}</div></div>
         ${s.favorite?'<div class="fav">★</div>':''}
       </div>`;
     }).join('')}
@@ -1616,7 +1617,7 @@ renderAll();
   }
 }
 </script>
-<script type="module" src="src/cloud.js?v=singo1"></script>
+<script type="module" src="src/cloud.js?v=history1"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

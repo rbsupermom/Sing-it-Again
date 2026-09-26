@@ -2,7 +2,7 @@
 
 Source specification: https://app.notion.com/p/3e7f75b164ba8118a3fecf549b665f1d
 
-Implemented September 26, 2026. This is a review build, not a verified production release.
+First release published September 26, 2026 (PR #2). Becca reported that both players love it. The September 26 history-link update adds the integration below.
 
 ## What players get
 
@@ -32,7 +32,7 @@ A shared song goes to the first **confirmed online transaction**, not a measured
 
 Hidden titles are hidden in the UI. The shared room contains the seed and catalog, so a technical player could inspect assignments. This is a trusted-friends game, not a server-secret or tamper-proof competitive service. Rules authenticate actors, protect history and restrict host commands. The shared deterministic engine ignores semantically invalid commands and derives progress consistently. A future untrusted-player version would require trusted server execution and per-player secret cards.
 
-The pool is editable before the first invite; pool editing and host transfer after room creation are follow-up work. Personal song libraries and performance history are not automatically modified by game performances. Archived nights are stored but have no history browser yet. Each night supports 1,500 commands, plus an end-round command, before starting a new night.
+The pool is editable before the first invite; pool editing and host transfer after room creation are follow-up work. Confirmed performances now flow into each singer’s personal History, Home statistics, Tonight list, and song counts. Archived game logs supply past-round performances; there is no separate archived-card browser. Each night supports 1,500 commands, plus an end-round command, before starting a new night.
 
 ## Persistence
 
@@ -43,17 +43,26 @@ The pool is editable before the first invite; pool editing and host transfer aft
 ## Validation completed
 
 - `npm run check`: syntax passes.
-- `npm test`: 24 tests pass: 13 game-engine tests, 5 DOM interaction tests, 6 existing Backstage regression tests.
+- `npm test`: 36 tests pass, including source reconciliation, actual Home/History/Tonight rendering, game rules, and Backstage listener regressions.
 - `npm run test:rules`: 2 Firebase emulator suites pass, including original account/Backstage privacy rules and two authenticated game clients.
 - Emulator game test covers concurrent conflicting claims (exactly one succeeds), reconnect equivalence, spoofed actors, outsider reads/writes, non-host calls, immutable history, center validation, correction, rematches, new-night archive persistence, and stale-session rejection.
-- No production accounts, personal libraries, or live game documents were changed during testing.
+- Automated tests use simulated accounts. Live verification may reconcile already-completed performances into the signed-in account, as requested; it does not invent game events or contact the other player.
 
-## Required release steps
+## Backstage performance integration · September 26, 2026
 
-1. Review the existing production Firestore rules and compare them with the repository baseline before applying the additive game rules. Do not overwrite unrelated rules edited outside GitHub.
-2. Publish the game rules from `firestore.rules` to the app's Firebase project. The browser's automatic approval review blocked the Google account redirect during this session, so deployment has not happened.
-3. Merge the application change to `main` and verify the GitHub Pages deployment. Service worker cache version is bumped to pick up the new modules.
-4. Check the actual mobile layout, Google sign-in, and invitation acceptance with two test accounts. Browser preview was blocked for localhost and file URLs in this environment; DOM tests are not a substitute for a rendered phone check.
-5. Smoke-test Traditional and Heat, close/reopen both devices, and record production results in Notion.
+- Challenges log only for the recipient who sings. Duets log once in each member’s account as Together. Singo logs only that player’s performances.
+- A source ID makes replay/reconnect idempotent. History repairs itself from acknowledged shared snapshots if a personal save was interrupted. Cached/pending writes do not overwrite confirmed history.
+- Host invitation starts or uses the current karaoke night; guest acceptance does the same on the guest’s device. Same-night rematches keep that night. An explicitly different game night creates a separate session when the current session belongs to the old game. A manually ended mapped night does not reopen on background snapshots.
+- A six-AM local boundary keeps after-midnight singing together. Old open sessions from a different karaoke date are closed when a new automatic night is activated.
+- New completion and game-command timestamps are verified server timestamps. Old records lacked exact performance times; backfill uses creation time and labels the time as estimated. Historical records do not activate old nights.
+- Song title and artist match existing personal songs case-insensitively; otherwise a song is added. Preferences and pre-existing counts are preserved. Source removals from Singo undo remove only that linked performance and decrement its count.
+- Current and archived game logs are replayed across all rounds. Completed challenges/duets are not limited to the recent-chat window.
+- Rules accept older clients without timestamps, preserving rollout compatibility. Clients must reload to enable history reconciliation and new timestamps. Each partner’s history is saved when that partner opens the updated app; neither account can write the other’s private state.
+- Source IDs prevent duplicate imports of a Backstage completion. They cannot determine whether a separately entered manual performance represents the same real-world song; such manual records remain intact.
 
-Firebase rules must be deployed before the front-end release. The UI shows a specific setup message if game access is denied, while existing Backstage remains available.
+## Deployment order
+
+1. Compare production rules with the repository baseline, then publish the additive timestamp validation rules.
+2. Merge the frontend and confirm GitHub Pages succeeds. Cache v9 includes the history module.
+3. Verify the signed-in app, existing history recovery, and completion totals. Do not send test invites or invent performances in the live pair.
+4. Record release and verification in the Notion project hub.

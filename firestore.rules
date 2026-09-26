@@ -87,7 +87,8 @@ service cloud.firestore {
             d.revision == resource.data.revision + 1 && (d.revision <= 1500 || (d.revision == 1501 && a.type == 'end')) &&
             d.events is map && d.events.size() == d.revision &&
             d.events.diff(resource.data.events).affectedKeys().hasOnly([key]) &&
-            a is map && a.keys().hasOnly(['actor','type','index','song','mode','seed','newNight']) &&
+            a is map && a.keys().hasOnly(['actor','type','index','song','mode','seed','newNight','at']) &&
+            (!('at' in a) || a.at == request.time) &&
             a.actor == request.auth.uid &&
             ((a.type in ['call','end','round'] && request.auth.uid == resource.data.hostUid) ||
              (a.type in ['accept','decline'] && request.auth.uid == resource.data.guestUid) ||
@@ -147,7 +148,9 @@ service cloud.firestore {
           request.resource.data.createdAt == request.time;
         allow update: if joined(pairId) &&
           resource.data.recipientUid == request.auth.uid &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) &&
+          (!('completedAt' in request.resource.data) ||
+            (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) &&
           ((resource.data.status == 'pending' && request.resource.data.status in ['accepted','passed']) ||
            (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
         allow delete: if false;
@@ -165,7 +168,9 @@ service cloud.firestore {
           request.resource.data.status == 'pending' &&
           request.resource.data.createdAt == request.time;
         allow update: if joined(pairId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) &&
+          (!('completedAt' in request.resource.data) ||
+            (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) &&
           ((resource.data.status == 'pending' &&
             resource.data.recipientUid == request.auth.uid &&
             request.resource.data.status in ['accepted','passed']) ||

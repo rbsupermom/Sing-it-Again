@@ -1,10 +1,11 @@
-const CACHE_NAME = 'sing-it-again-v8-singo-bingo';
+const CACHE_NAME = 'sing-it-again-v9-backstage-history';
 const APP_SHELL = [
   './',
   './index.html',
   './firebase-config.js',
-  './src/cloud.js?v=singo1',
+  './src/cloud.js?v=history1',
   './src/singo.js',
+  './src/backstage-history.js',
   './src/singo-store.js',
   './src/singo-engine.js',
   './src/singo-pool.js',

@@ -3,7 +3,7 @@ import {appendAction,deal,normalizePool,replay,applyAction} from './singo-engine
 export function singoStore(db,pairId,user) {
   const ref=doc(db,'pairs',pairId,'singo','current');
   return {
-    listen(next,error) {return onSnapshot(ref,{includeMetadataChanges:true},snap=>next(snap.exists()?snap.data():null,!snap.metadata.fromCache),error);},
+    listen(next,error) {return onSnapshot(ref,{includeMetadataChanges:true},snap=>next(snap.exists()?snap.data():null,!snap.metadata.fromCache&&!snap.metadata.hasPendingWrites),error);},
     async create({guestUid,names,pool,mode,seed}) {
       const sessionId=crypto.randomUUID();
       const cleaned=normalizePool(pool);deal(cleaned,mode,seed);
@@ -19,7 +19,7 @@ export function singoStore(db,pairId,user) {
         if(!snap.exists()) throw new Error('This game could not be found.');
         const room=snap.data();
         if((expectedSessionId && room.sessionId!==expectedSessionId)||replay(room).round!==expectedRound) throw new Error('A new round has started. Open your updated card.');
-        const command={...action,actor:user.uid};
+        const command={...action,actor:user.uid,at:serverTimestamp()};
         if(action.type==='round'&&action.newNight) {
           applyAction(replay(room),command,room);
           const archive=doc(db,'pairs',pairId,'singoArchive',room.sessionId);
