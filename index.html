@@ -312,13 +312,31 @@ textarea{min-height:80px;resize:vertical}
   background:linear-gradient(180deg,rgba(36,16,20,.97),rgba(20,8,10,.99));
   -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   border-top:2px solid var(--gold);
-  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
   padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:10;
   box-shadow:0 -8px 24px rgba(0,0,0,.4);
 }
-.nav-btn{background:transparent;border:1.5px solid transparent;color:var(--cream-dim);padding:6px 4px;border-radius:10px;font-size:.7rem;font-weight:700}
+.nav-btn{background:transparent;border:1.5px solid transparent;color:var(--cream-dim);padding:6px 2px;border-radius:10px;font-size:.67rem;font-weight:700}
 .nav-btn span{display:block;font-size:1.2rem;margin-bottom:2px}
 .nav-btn.active{color:var(--cream);background:linear-gradient(180deg,var(--carpet),var(--curtain));border-color:var(--gold);box-shadow:0 3px 10px rgba(193,18,31,.35)}
+
+/* ---------- Backstage ---------- */
+.cloud-gate{position:fixed;inset:0;z-index:45;background:var(--stage);display:flex;align-items:center;justify-content:center;padding:24px}
+.cloud-gate[hidden]{display:none}
+.cloud-gate .card{width:min(440px,100%);padding:24px;text-align:center}
+.cloud-status{font-size:.75rem;color:var(--cream-dim);margin:0 0 8px}
+.backstage-tabs{display:flex;gap:6px;margin:14px 0}
+.backstage-tabs button{flex:1;font-size:.8rem}
+.backstage-tab[hidden]{display:none}
+.backstage-card{padding:14px;margin:10px 0}
+.backstage-card p{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.backstage-meta{color:var(--cream-dim);font-size:.76rem}
+.backstage-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.backstage-actions button{flex:1}
+.backstage-compose{display:flex;align-items:end;gap:8px;margin:14px 0}
+.backstage-compose textarea{margin:0;min-height:48px;max-height:120px;flex:1}
+.backstage-compose button{flex:0 0 auto}
+.cloud-error{color:var(--danger);min-height:1.3em;font-size:.82rem}
 
 /* ---------- Bottom-sheet modal ---------- */
 .modal{position:fixed;inset:0;background:rgba(8,2,3,.72);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:10px}
@@ -660,14 +678,57 @@ footer.curtain-call{text-align:center;color:#7a6a4d;font-size:.72rem;margin-top:
       </div>
       <div id="historyList"></div>
     </section>
+
+    <!-- ================= BACKSTAGE ================= -->
+    <section class="screen" id="backstageScreen">
+      <div class="playbill">
+        <h2>👯‍♀️ Backstage</h2>
+        <p id="backstagePartner">Your private space for songs with your karaoke partner.</p>
+        <div class="cloud-status" id="cloudStatus" role="status"></div>
+        <button class="ghost-btn small-action" id="accountBtn">Account &amp; invite</button>
+      </div>
+      <div id="backstageInvite"></div>
+      <div id="backstageRoom" hidden>
+        <div class="backstage-tabs" role="tablist" aria-label="Backstage views">
+          <button class="ghost-btn" data-backstage-tab="chat">Chat</button>
+          <button class="ghost-btn" data-backstage-tab="challenges">Challenges</button>
+          <button class="ghost-btn" data-backstage-tab="duets">Duets</button>
+        </div>
+        <div class="backstage-tab" id="backstageChat">
+          <div id="backstageMessages" aria-live="polite"></div>
+          <form class="backstage-compose" id="messageForm">
+            <textarea id="messageText" maxlength="500" placeholder="Send a note or a song idea…" aria-label="Message"></textarea>
+            <button class="primary-btn" type="submit">Send</button>
+          </form>
+        </div>
+        <div class="backstage-tab" id="backstageChallenges" hidden>
+          <button class="primary-btn full" data-new-shared="challenge">+ Challenge Erica with a song</button>
+          <div id="challengeList"></div>
+        </div>
+        <div class="backstage-tab" id="backstageDuets" hidden>
+          <button class="primary-btn full" data-new-shared="duet">+ Suggest a duet</button>
+          <div id="duetList"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <nav class="bottom-nav">
     <button class="nav-btn active" data-screen="homeScreen"><span>🏠</span>Home</button>
     <button class="nav-btn" data-screen="tonightScreen"><span>🎤</span>Tonight</button>
     <button class="nav-btn" data-screen="songsScreen"><span>🎵</span>My Songs</button>
+    <button class="nav-btn" data-screen="backstageScreen"><span>👯‍♀️</span>Backstage</button>
     <button class="nav-btn" data-screen="historyScreen"><span>📊</span>History</button>
   </nav>
+</div>
+
+<div class="cloud-gate" id="cloudGate">
+  <div class="card">
+    <h2>🎤 Your songs, wherever you sing</h2>
+    <p id="gateMessage">Sign in to open your personal song library and Backstage.</p>
+    <button class="primary-btn full" id="googleSignInBtn">Continue with Google</button>
+    <p class="cloud-error" id="gateError" role="alert"></p>
+  </div>
 </div>
 
 <div class="modal" id="modal">
@@ -689,6 +750,7 @@ footer.curtain-call{text-align:center;color:#7a6a4d;font-size:.72rem;margin-top:
 
 <script>
 const STORAGE_KEY = 'singItAgainPrototypeV10';
+const HAD_LOCAL_STATE = localStorage.getItem(STORAGE_KEY) !== null;
 
 const spotifySeedSongs = [{"title": "No One Else On Earth", "artist": "Wynonna", "sourcePlaylists": ["Karaoke"]}, {"title": "Bitch", "artist": "Meredith Brooks", "sourcePlaylists": ["Karaoke"]}, {"title": "Don't Turn Around (Originally Performed by Ace of Base) [Vocal Version]", "artist": "Mega Tracks Karaoke Band", "sourcePlaylists": ["Karaoke"]}, {"title": "I Will Always Love You (Originally Performed by Whitney Houston) [Vocal Version]", "artist": "Mega Tracks Karaoke Band", "sourcePlaylists": ["Karaoke"]}, {"title": "The Right Kind Of Wrong", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "You Oughta Know - 2015 Remaster", "artist": "Alanis Morissette", "sourcePlaylists": ["Karaoke"]}, {"title": "Give Me One Reason", "artist": "Tracy Chapman", "sourcePlaylists": ["Karaoke"]}, {"title": "She's In Love With The Boy", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Settlin'", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "If It Makes You Happy", "artist": "Sheryl Crow", "sourcePlaylists": ["Karaoke"]}, {"title": "That's What I Like About You", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Mama's Broken Heart", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "Any Man Of Mine", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Kiss Me", "artist": "Sixpence None The Richer", "sourcePlaylists": ["Karaoke"]}, {"title": "Ironic - 2015 Remaster", "artist": "Alanis Morissette", "sourcePlaylists": ["Karaoke"]}, {"title": "Strawberry Wine", "artist": "Deana Carter", "sourcePlaylists": ["Karaoke"]}, {"title": "What's Up?", "artist": "4 Non Blondes", "sourcePlaylists": ["Karaoke"]}, {"title": "Heads Carolina, Tails California", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "There's Your Trouble", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Whose Bed Have Your Boots Been Under?", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Maybe It Was Memphis", "artist": "Pam Tillis", "sourcePlaylists": ["Karaoke"]}, {"title": "One Way Ticket (Because I Can)", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "My Baby Loves Me", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Try to Think About Elvis", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Landslide", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Guys Do It All the Time", "artist": "Mindy McCready", "sourcePlaylists": ["Karaoke"]}, {"title": "Blame It on Your Heart", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Blue", "artist": "LeAnn Rimes", "sourcePlaylists": ["Karaoke"]}, {"title": "Shake The Sugar Tree", "artist": "Pam Tillis", "sourcePlaylists": ["Karaoke"]}, {"title": "Why Not Me", "artist": "The Judds", "sourcePlaylists": ["Karaoke"]}, {"title": "Girls Lie Too - Greatest Hits Version", "artist": "Terri Clark", "sourcePlaylists": ["Karaoke"]}, {"title": "Grandpa (Tell Me 'Bout The Good Old Days)", "artist": "The Judds", "sourcePlaylists": ["Karaoke"]}, {"title": "There Is No Arizona", "artist": "Jamie O'Neal", "sourcePlaylists": ["Karaoke"]}, {"title": "No One Needs To Know", "artist": "Shania Twain", "sourcePlaylists": ["Karaoke"]}, {"title": "Redneck Woman", "artist": "Gretchen Wilson", "sourcePlaylists": ["Karaoke"]}, {"title": "A Broken Wing", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Just Wanna Be Mad", "artist": "Terri Clark", "sourcePlaylists": ["Karaoke"]}, {"title": "Kerosene", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "Stay", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "Something More", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "All I Want To Do", "artist": "Sugarland", "sourcePlaylists": ["Karaoke"]}, {"title": "Break Down Here", "artist": "Julie Roberts", "sourcePlaylists": ["Karaoke"]}, {"title": "You Don't Even Know Who I Am", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Chains", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Gunpowder & Lead", "artist": "Miranda Lambert", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm That Kind Of Girl", "artist": "Patty Loveless", "sourcePlaylists": ["Karaoke"]}, {"title": "Walkin' After Midnight", "artist": "Patsy Cline", "sourcePlaylists": ["Karaoke"]}, {"title": "Wrong Side Of Memphis", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm Alright", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "This One's for the Girls", "artist": "Martina McBride", "sourcePlaylists": ["Karaoke"]}, {"title": "I Hope You Dance", "artist": "Lee Ann Womack", "sourcePlaylists": ["Karaoke"]}, {"title": "Not Ready to Make Nice", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "It's A Little Too Late", "artist": "Tanya Tucker", "sourcePlaylists": ["Karaoke"]}, {"title": "Eighteen Wheels And A Dozen Roses", "artist": "Kathy Mattea", "sourcePlaylists": ["Karaoke"]}, {"title": "Hell on Heels", "artist": "Pistol Annies, Miranda Lambert, Ashley Monroe, Angaleena Presley", "sourcePlaylists": ["Karaoke"]}, {"title": "Rescue", "artist": "Lauren Daigle", "sourcePlaylists": ["Karaoke"]}, {"title": "You Say", "artist": "Lauren Daigle", "sourcePlaylists": ["Karaoke"]}, {"title": "There Are Worse Things I Could Do - From “Grease”", "artist": "Stockard Channing", "sourcePlaylists": ["Karaoke"]}, {"title": "This Woman Needs", "artist": "SHeDAISY", "sourcePlaylists": ["Karaoke"]}, {"title": "Except for Monday", "artist": "Lorrie Morgan", "sourcePlaylists": ["Karaoke"]}, {"title": "I Can Love You Better", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "It Matters to Me", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "Yoü And I", "artist": "Lady Gaga", "sourcePlaylists": ["Karaoke"]}, {"title": "Rolling in the Deep", "artist": "Adele", "sourcePlaylists": ["Karaoke"]}, {"title": "If I Ain't Got You", "artist": "Alicia Keys", "sourcePlaylists": ["Karaoke"]}, {"title": "Stay", "artist": "Rihanna, Mikky Ekko", "sourcePlaylists": ["Karaoke"]}, {"title": "Here for the Party", "artist": "Gretchen Wilson", "sourcePlaylists": ["Karaoke"]}, {"title": "Breathe", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "Shallow", "artist": "Lady Gaga, Bradley Cooper", "sourcePlaylists": ["Karaoke"]}, {"title": "When Will I Be Loved", "artist": "Linda Ronstadt", "sourcePlaylists": ["Karaoke"]}, {"title": "Stone Cold", "artist": "Demi Lovato", "sourcePlaylists": ["Karaoke"]}, {"title": "Forgive", "artist": "Rebecca Lynn Howard", "sourcePlaylists": ["Karaoke"]}, {"title": "Gun In My Hand", "artist": "Dorothy", "sourcePlaylists": ["Karaoke"]}, {"title": "Black Velvet", "artist": "Alannah Myles", "sourcePlaylists": ["Karaoke"]}, {"title": "My Give A Damn's Busted", "artist": "Jo Dee Messina", "sourcePlaylists": ["Karaoke"]}, {"title": "Don't Stop Believin'", "artist": "Journey", "sourcePlaylists": ["Karaoke"]}, {"title": "Holding Out for a Hero - From \"Footloose\" Soundtrack", "artist": "Bonnie Tyler", "sourcePlaylists": ["Karaoke"]}, {"title": "Straight Up", "artist": "Paula Abdul", "sourcePlaylists": ["Karaoke"]}, {"title": "Listen To Your Heart", "artist": "Roxette", "sourcePlaylists": ["Karaoke"]}, {"title": "Hero", "artist": "Mariah Carey", "sourcePlaylists": ["Karaoke"]}, {"title": "Walkin' After Midnight", "artist": "Patsy Cline, The Jordanaires", "sourcePlaylists": ["Karaoke"]}, {"title": "XXX's And OOO's (An American Girl)", "artist": "Trisha Yearwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Strong Enough", "artist": "Sheryl Crow", "sourcePlaylists": ["Karaoke"]}, {"title": "Make You Feel My Love", "artist": "Adele", "sourcePlaylists": ["Karaoke"]}, {"title": "Last Name", "artist": "Carrie Underwood", "sourcePlaylists": ["Karaoke"]}, {"title": "Just Like a Pill", "artist": "P!nk", "sourcePlaylists": ["Karaoke", "TRY SOMETHING NEW"]}, {"title": "Something To Talk About", "artist": "Bonnie Raitt", "sourcePlaylists": ["Karaoke"]}, {"title": "Like We Never Loved at All", "artist": "Faith Hill", "sourcePlaylists": ["Karaoke"]}, {"title": "You Were Meant For Me", "artist": "Jewel", "sourcePlaylists": ["Karaoke"]}, {"title": "I'm The Only One", "artist": "Melissa Etheridge", "sourcePlaylists": ["Karaoke"]}, {"title": "Goodbye Earl", "artist": "The Chicks", "sourcePlaylists": ["Karaoke"]}, {"title": "Girl Crush", "artist": "Little Big Town", "sourcePlaylists": ["Karaoke"]}, {"title": "Johnny & June", "artist": "Heidi Newfield", "sourcePlaylists": ["Karaoke"]}, {"title": "Foolish Games", "artist": "Jewel", "sourcePlaylists": ["Karaoke"]}, {"title": "Rockin' Years (with Ricky Van Shelton)", "artist": "Dolly Parton, Ricky Van Shelton", "sourcePlaylists": ["Karaoke"]}, {"title": "Ashes By Now", "artist": "Lee Ann Womack", "sourcePlaylists": ["Karaoke"]}, {"title": "Tennessee Whiskey", "artist": "Chris Stapleton", "sourcePlaylists": ["Karaoke", "Karaoke (Male)"]}, {"title": "Dance Monkey", "artist": "Tones And I", "sourcePlaylists": ["Karaoke"]}, {"title": "drivers license", "artist": "Olivia Rodrigo", "sourcePlaylists": ["Karaoke"]}, {"title": "I Have Nothing", "artist": "Whitney Houston", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "F**kin' Perfect", "artist": "P!nk", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Complicated", "artist": "Avril Lavigne", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Because of You", "artist": "Kelly Clarkson", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Love Song", "artist": "Sara Bareilles", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "That Don't Impress Me Much", "artist": "Shania Twain", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Teenage Dream", "artist": "Katy Perry", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Slow Dance", "artist": "Kelly Clarkson", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "What I'm Doing Here", "artist": "Lake Street Dive", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Slide", "artist": "The Goo Goo Dolls", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Vice", "artist": "Miranda Lambert", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Torn", "artist": "Natalie Imbruglia", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Raise Your Glass", "artist": "P!nk", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Maybe", "artist": "Janis Joplin", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Umbrella", "artist": "Rihanna, JAŸ-Z", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Bleeding Love", "artist": "Leona Lewis", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Ain't It Fun", "artist": "Paramore", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Crush", "artist": "Jennifer Paige", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Piece of My Heart", "artist": "Big Brother & The Holding Company, Janis Joplin", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Are You Happy Now?", "artist": "Michelle Branch", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "Girl on Fire", "artist": "Alicia Keys", "sourcePlaylists": ["TRY SOMETHING NEW"]}, {"title": "All of Me", "artist": "John Legend", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Pray", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lay Me Down (feat. John Legend)", "artist": "Sam Smith, John Legend", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "I'm Not The Only One", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Stay With Me", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lay Me Down", "artist": "Sam Smith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Cold", "artist": "Chris Stapleton", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Cryin'", "artist": "Aerosmith", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Lights", "artist": "Journey", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "Little Bitty Pretty One", "artist": "Thurston Harris, The Sharps", "sourcePlaylists": ["Karaoke (Male)"]}, {"title": "I Don't Want To Miss A Thing", "artist": "Aerosmith", "sourcePlaylists": ["Karaoke (Male)"]}].map(s => ({
   id: crypto.randomUUID(),
@@ -778,7 +840,10 @@ if(!Array.isArray(state.songs) || !state.songs.length) state.songs = starterSong
 if(!state.companion) state.companion = {enabled:false, name:'Erica'};
 state.songs.forEach(s=>{ if(typeof s.ourJam==='undefined') s.ourJam=false; });
 
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.KaraokeCloud?.scheduleSave(state);
+}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 function fmtDate(iso){
   if(!iso) return 'Never';
@@ -1028,6 +1093,7 @@ function renderSongs(){
       <div class="btn-row">
         <button class="ghost-btn" onclick="queueSong('${s.id}')">+ Queue</button>
         <button class="ghost-btn" onclick="editSong('${s.id}')">Edit</button>
+        <button class="ghost-btn" onclick="window.KaraokeCloud?.shareSong('${s.id}')">Share ↗</button>
         <button class="purple-btn" onclick="performanceDialog('${s.id}')">Sang It 🎤</button>
       </div>
     </div>`).join('');
@@ -1423,7 +1489,7 @@ function backupDialog(){
   const last = state.lastBackupAt ? `${fmtDate(state.lastBackupAt)} at ${fmtTime(state.lastBackupAt)}` : 'Never';
   openModal(`
     <h3>💾 Backup &amp; Restore</h3>
-    <p>Your songs, shows and history are saved only on this device. Save a backup file every so often, and always before switching phones.</p>
+    <p>Save a personal copy of your songs, shows, and history. Your signed-in account also syncs them between your devices.</p>
     <div class="theme-active-card"><strong>Last backup:</strong> ${esc(last)}<div class="tiny" style="margin-top:4px">${state.songs.length} songs · ${state.performances.length} performances · ${state.sessions.length} shows</div></div>
     <button class="primary-btn full" onclick="exportBackup()">Save a backup file</button>
     <button class="ghost-btn full" style="margin-top:9px" onclick="document.getElementById('restoreFile').click()">Restore from a backup file</button>
@@ -1522,8 +1588,32 @@ document.getElementById('quickRouletteBtn').addEventListener('click',pickRoulett
 document.getElementById('songSearch').addEventListener('input',renderSongs);
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
+window.KaraokeApp={
+  getState:()=>state,
+  setState:next=>{state=next;renderAll();},
+  emptyState:()=>({...defaultState(),songs:[]}),
+  getSong,
+  hadLocalState:HAD_LOCAL_STATE,
+  showModal:openModal,
+  closeModal,
+  esc,
+  switchScreen,
+  storageKey:STORAGE_KEY
+};
 renderAll();
 </script>
+
+<script src="firebase-config.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js"
+  }
+}
+</script>
+<script type="module" src="src/cloud.js"></script>
 
 <script>
 if ('serviceWorker' in navigator) {
