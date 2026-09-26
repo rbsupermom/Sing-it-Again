@@ -1590,7 +1590,7 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='
 
 window.KaraokeApp={
   getState:()=>state,
-  setState:next=>{state=next;renderAll();},
+  setState:next=>{state=next;renderAll();save();},
   emptyState:()=>({...defaultState(),songs:[]}),
   getSong,
   hadLocalState:HAD_LOCAL_STATE,
