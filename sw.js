@@ -1,9 +1,9 @@
-const CACHE_NAME = 'sing-it-again-v6-backstage';
+const CACHE_NAME = 'sing-it-again-v7-backstage-reconnect';
 const APP_SHELL = [
   './',
   './index.html',
   './firebase-config.js',
-  './src/cloud.js',
+  './src/cloud.js?v=backstage2',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

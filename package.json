@@ -2,6 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:backstage": "node --test tests/backstage.test.js",
     "check": "node --check src/cloud.js && node --check sw.js",
     "test:rules": "npx --yes firebase-tools@14.25.1 emulators:exec --only firestore 'node --test tests/rules.test.js'"
   },

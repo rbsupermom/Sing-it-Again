@@ -5,7 +5,7 @@ import {
 } from 'firebase/auth';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, collection, getDoc, getDocFromServer, setDoc, updateDoc, addDoc,
+  doc, collection, getDocFromServer, setDoc, updateDoc, addDoc,
   onSnapshot, query, orderBy, limit, serverTimestamp
 } from 'firebase/firestore';
 
@@ -36,6 +36,8 @@ let activeTab = 'chat';
 let signInBusy = false;
 let inFlight = 0;
 let editingInvite = false;
+let accountPairId = null;
+let sharedPairId = null;
 
 function notice(message, error = false) {
   status.textContent = message;
@@ -69,22 +71,32 @@ function loadLocal(uid) {
 function useState(data) {
   suppress = true;
   try {
-    const next = data && Array.isArray(data.songs) && Array.isArray(data.performances) &&
+    let next = data && Array.isArray(data.songs) && Array.isArray(data.performances) &&
       Array.isArray(data.sessions) ? data : app.emptyState();
+    if (accountPairId) next = { ...next, pairId: accountPairId };
     app.setState(next);
     lastState = JSON.stringify(next);
     if (user) storeLocal(user.uid, next);
   } finally { suppress = false; }
+  if (ready && user) syncBackstage();
 }
-function stopListeners() {
-  listeners.forEach(stop => stop());
-  listeners = [];
+function stopPairListeners() {
   pairListeners.forEach(stop => stop());
   pairListeners = [];
   pair = null;
   pairId = null;
+  sharedPairId = null;
   messages = []; challenges = []; duets = [];
   room.hidden = true;
+  for (const id of ['backstageMessages', 'challengeList', 'duetList']) {
+    document.getElementById(id).innerHTML = '';
+  }
+}
+function stopListeners() {
+  listeners.forEach(stop => stop());
+  listeners = [];
+  stopPairListeners();
+  accountPairId = null;
 }
 
 // The old device copy is captured once, before an account can replace it.
@@ -119,7 +131,7 @@ function flush() {
   writeChain = writeChain.catch(() => {}).then(async () => {
     inFlight++;
     try {
-      await setDoc(target, { data: next, updatedAt: serverTimestamp() });
+      await setDoc(target, { data: next, updatedAt: serverTimestamp() }, { merge: true });
       if (user && user.uid === uid) notice('Your songs are synced');
     } finally { inFlight--; }
   });
@@ -152,7 +164,11 @@ async function loadAccount(signedIn) {
   }
   if (snapshot) {
     if (snapshot.exists()) {
+      accountPairId = snapshot.data().backstagePairId || snapshot.data().data?.pairId || null;
       useState(snapshot.data().data);
+      if (accountPairId && !snapshot.data().backstagePairId) {
+        await setDoc(stateRef, { backstagePairId: accountPairId }, { merge: true });
+      }
     } else {
       useState(app.emptyState());
       await setDoc(stateRef, { data: app.getState(), updatedAt: serverTimestamp() });
@@ -165,14 +181,17 @@ async function loadAccount(signedIn) {
   const accountUid = user.uid;
   listeners.push(onSnapshot(stateRef, { includeMetadataChanges: true }, snap => {
     if (!user || user.uid !== accountUid || !snap.exists()) return;
+    const connection = snap.data().backstagePairId || snap.data().data?.pairId;
+    if (connection) accountPairId = connection;
     if (!unsaved && !inFlight && snap.data().data) {
       const remote = JSON.stringify(snap.data().data);
       if (remote !== lastState && !snap.metadata.hasPendingWrites) useState(snap.data().data);
     }
+    syncBackstage();
     if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) notice('Offline or saving · your changes are kept on this device');
     else notice('Your songs are synced');
   }, fail));
-  if (app.getState().pairId) listenPair(app.getState().pairId);
+  syncBackstage();
   renderBackstage();
   gate.hidden = true;
   const invited = new URLSearchParams(location.search).get('invite');
@@ -207,7 +226,7 @@ function offerImport() {
         songs: old.songs, performances: old.performances || [], sessions: old.sessions || [],
         queue: old.queue || [], activeSessionId: old.activeSessionId || null,
         companion: old.companion || { enabled: false, name: 'Erica' },
-        pairId: null
+        pairId: accountPairId || app.getState().pairId || null
       };
       useState(imported);
       lastState = '';
@@ -244,30 +263,60 @@ function peerName() {
 }
 function pairPath() { return doc(db, 'pairs', pairId); }
 
+function syncBackstage() {
+  const id = accountPairId || app.getState().pairId;
+  if (id && id !== pairId) listenPair(id);
+}
+async function savePairConnection(id) {
+  // Keep membership separate from the replaceable song-library snapshot.
+  // Save explicitly, including when an older app shell is still cached.
+  const target = stateRef;
+  await setDoc(target, { backstagePairId: id }, { merge: true });
+  accountPairId = id;
+  const current = { ...app.getState(), pairId: id };
+  app.setState(current);
+  scheduleSave(current);
+  await flush();
+  listenPair(id);
+}
 function listenPair(id) {
-  pairListeners.forEach(stop => stop());
-  pairListeners = [];
+  if (pairId === id && pairListeners.length) return;
+  stopPairListeners();
   pairId = id;
   editingInvite = false;
+  renderBackstage();
   pairListeners.push(onSnapshot(doc(db, 'pairs', id), snap => {
+    if (pairId !== id || !user) return;
     if (!snap.exists()) {
+      stopPairListeners();
+      renderBackstage();
       notice('This Backstage invite no longer exists.', true);
       return;
     }
-    const wasJoined = !!pair?.partnerUid;
     pair = snap.data();
     renderBackstage();
-    if (pair.partnerUid && !wasJoined) subscribeShared();
-  }, fail));
+    if (pair.partnerUid && sharedPairId !== id) subscribeShared(id);
+  }, error => {
+    stopPairListeners();
+    renderBackstage();
+    partnerLabel.textContent = 'Backstage could not reconnect. Reopen your original invite link to try again.';
+    fail(error);
+  }));
 }
-function subscribeShared() {
+function subscribeShared(id) {
+  sharedPairId = id;
   for (const [name, setter] of [
     ['messages', value => { messages = value; renderMessages(); }],
     ['challenges', value => { challenges = value; renderEntries('challenge'); }],
     ['duets', value => { duets = value; renderEntries('duet'); }]
   ]) {
-    const q = query(collection(db, 'pairs', pairId, name), orderBy('createdAt', 'desc'), limit(75));
-    pairListeners.push(onSnapshot(q, snapshot => setter(snapshot.docs.map(d => ({ id: d.id, ...d.data() }))), fail));
+    const q = query(collection(db, 'pairs', id, name), orderBy('createdAt', 'desc'), limit(75));
+    pairListeners.push(onSnapshot(q, snapshot => {
+      if (pairId === id && user) setter(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, error => {
+      partnerLabel.textContent = 'Backstage could not load your conversation. Refresh to reconnect.';
+      fail(error);
+    }));
   }
 }
 function inviteLink() {
@@ -284,7 +333,10 @@ function renderBackstage() {
     ? 'You and ' + peerName() + ' · songs, dares, and duet plans'
     : 'Invite your singing partner to make a private Backstage together.';
   inviteBox.innerHTML = '';
-  if (!pair || editingInvite) {
+  if (pairId && !pair) {
+    partnerLabel.textContent = 'Reconnecting to your shared Backstage…';
+    inviteBox.innerHTML = '<div class="card backstage-card"><p>Opening your conversation…</p></div>';
+  } else if (!pair || editingInvite) {
     inviteBox.innerHTML =
       '<div class="card backstage-card"><h3>Invite your karaoke partner</h3>' +
       '<p>Enter the Google email your partner will use to sign in. Only that account can join your invite.</p>' +
@@ -330,11 +382,7 @@ async function createInvite(email) {
         partnerUid: null, partnerName: '', inviteeEmail: clean,
         createdAt: serverTimestamp()
       });
-      const current = app.getState();
-      current.pairId = ref.id;
-      app.setState(current);
-      await flush();
-      listenPair(ref.id);
+      await savePairConnection(ref.id);
     }
   } catch (error) { fail(error); }
 }
@@ -342,24 +390,22 @@ async function acceptInvite(id) {
   if (!user || !/^[A-Za-z0-9]{15,80}$/.test(id)) return;
   try {
     const ref = doc(db, 'pairs', id);
-    const snap = await getDoc(ref);
+    const snap = await getDocFromServer(ref);
     if (!snap.exists()) throw new Error('This invite was not found.');
     const data = snap.data();
-    if (data.inviteeEmail !== (user.email || '').toLowerCase()) {
+    const isOwner = data.ownerUid === user.uid;
+    if (!isOwner && data.inviteeEmail !== (user.email || '').toLowerCase()) {
       throw new Error('This invite is for ' + data.inviteeEmail + '. Sign in with that Google account.');
     }
-    if (data.partnerUid && data.partnerUid !== user.uid) throw new Error('This invite has already been used.');
-    if (app.getState().pairId && app.getState().pairId !== id) {
+    if (!isOwner && data.partnerUid && data.partnerUid !== user.uid) throw new Error('This invite has already been used.');
+    const existingPairId = accountPairId || app.getState().pairId;
+    if (existingPairId && existingPairId !== id) {
       throw new Error('Your account is already connected to another Backstage.');
     }
-    if (!data.partnerUid) {
+    if (!isOwner && !data.partnerUid) {
       await updateDoc(ref, { partnerUid: user.uid, partnerName: (user.displayName || 'Erica').slice(0, 80) });
     }
-    const current = app.getState();
-    current.pairId = id;
-    app.setState(current);
-    await flush();
-    listenPair(id);
+    await savePairConnection(id);
     history.replaceState(null, '', location.pathname + location.hash);
     app.switchScreen('backstageScreen');
   } catch (error) { fail(error); alert(errorText(error)); }
