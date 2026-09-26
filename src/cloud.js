@@ -1,5 +1,6 @@
 import './singo.js';
 import {entryHistory, singoHistory, reconcileHistory} from './backstage-history.js';
+import {stableStringify} from './state-data.js';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup,
@@ -89,7 +90,7 @@ function useState(data) {
       Array.isArray(data.sessions) ? data : app.emptyState();
     if (accountPairId) next = { ...next, pairId: accountPairId };
     app.setState(next);
-    lastState = JSON.stringify(next);
+    lastState = stableStringify(next);
     if (user) storeLocal(user.uid, next);
   } finally { suppress = false; }
   if (ready && user) syncBackstage();
@@ -129,8 +130,8 @@ try {
 function scheduleSave(data) {
   if (!ready || suppress || !user || !stateRef) return;
   const copy = JSON.parse(JSON.stringify(data));
-  const serialized = JSON.stringify(copy);
-  if (serialized === lastState) return;
+  const serialized = stableStringify(copy);
+  if (serialized === lastState || (unsaved && serialized === stableStringify(unsaved))) return;
   unsaved = copy;
   storeLocal(user.uid, copy);
   notice('Saving your songs…');
@@ -144,7 +145,7 @@ function flush() {
   const target = stateRef;
   const uid = user.uid;
   unsaved = null;
-  lastState = JSON.stringify(next);
+  lastState = stableStringify(next);
   writeChain = writeChain.catch(() => {}).then(async () => {
     inFlight++;
     try {
@@ -201,11 +202,12 @@ async function loadAccount(signedIn) {
     const connection = snap.data().backstagePairId || snap.data().data?.pairId;
     if (connection) accountPairId = connection;
     if (!unsaved && !inFlight && snap.data().data) {
-      const remote = JSON.stringify(snap.data().data);
+      const remote = stableStringify(snap.data().data);
       if (remote !== lastState && !snap.metadata.hasPendingWrites) useState(snap.data().data);
     }
     syncBackstage();
-    if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) notice('Offline or saving · your changes are kept on this device');
+    if (snap.metadata.hasPendingWrites || unsaved) notice('Saving your songs…');
+    else if (snap.metadata.fromCache) notice('Connecting · your songs are kept on this device');
     else notice('Your songs are synced');
   }, fail));
   syncBackstage();

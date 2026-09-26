@@ -140,3 +140,16 @@ test('the real app renders linked performances in Home, History and Tonight',()=
   assert.match(w.document.getElementById('homeGreeting').textContent,/live/);
   dom.window.close();
 });
+
+function firestoreMapOrder(value) {
+  if (Array.isArray(value)) return value.map(firestoreMapOrder);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value).sort().map(k => [k, firestoreMapOrder(value[k])]));
+}
+test('Firestore map ordering does not make an unchanged history look edited',()=>{
+  const batch=history('duet','becca');
+  const saved=reconcileHistory(empty(),[batch],now);
+  const remote=firestoreMapOrder(saved);
+  assert.deepEqual(remote,saved);
+  assert.equal(reconcileHistory(remote,[batch],now),remote,'server field order must not cause another save');
+});

@@ -3,6 +3,7 @@ import { runInNewContext } from 'node:vm';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {entryHistory, singoHistory, reconcileHistory} from '../src/backstage-history.js';
+import {stableStringify} from '../src/state-data.js';
 
 // Exercise the actual client against controlled account and Firestore events.
 // No production accounts or data are used.
@@ -27,7 +28,7 @@ function client({ bridgeSaves = true } = {}) {
     esc: value => String(value), showModal() {}, closeModal() {}, switchScreen() {}
   };
   const context = {
-    entryHistory, singoHistory, reconcileHistory,
+    entryHistory, singoHistory, reconcileHistory, stableStringify,
     window: { KaraokeApp: app },
     document: { getElementById: node, querySelector: node },
     localStorage: { getItem: () => null, setItem() {} },
@@ -142,4 +143,42 @@ test('acknowledged duet completions update the personal log and repair an older 
   c.api.stopListeners();
   feed.next({docs:[completed],metadata:{fromCache:false,hasPendingWrites:false}});
   assert.equal(c.app.getState().performances.length,1);
+});
+
+function firestoreMapOrder(value) {
+  if (Array.isArray(value)) return value.map(firestoreMapOrder);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.keys(value).sort().map(k=>[k,firestoreMapOrder(value[k])]));
+}
+test('repeated server acknowledgements do not restart history saves',async()=>{
+  const c=client();c.api.listenPair('pair1');c.emitPair('pair1');
+  const feed=c.feeds.find(f=>f.path==='pairs/pair1/duets');
+  feed.next({docs:[{id:'duet1',data:()=>({senderUid:'becca',recipientUid:'erica',status:'sung',
+    title:'Shallow',artist:'Lady Gaga',createdAt:'2026-09-20T20:00:00Z',completedAt:new Date().toISOString()})}],
+    metadata:{fromCache:false,hasPendingWrites:false}});
+  await c.api.flush();
+  const baseline=c.writes.length;
+  for(let i=0;i<5;i++) {
+    c.api.useState(firestoreMapOrder(c.writes.at(-1).data.data));
+    await c.api.flush();
+  }
+  assert.equal(c.writes.length,baseline,'an unchanged server echo must never write itself back');
+  assert.equal(c.app.getState().performances.length,1);
+});
+test('field ordering alone does not schedule a personal-account save',async()=>{
+  const c=client();const data={songs:[{title:'Shallow',artist:'Lady Gaga',count:1}],performances:[],sessions:[]};
+  c.api.useState(data);
+  c.api.scheduleSave(firestoreMapOrder(data));await c.api.flush();
+  assert.equal(c.writes.length,0);
+});
+
+test('real edits and queue order changes still save after an unchanged acknowledgement',async()=>{
+  const c=client();const data={songs:[{id:'s',title:'Shallow',artist:'Lady Gaga',count:1}],performances:[],sessions:[],queue:['a','b']};
+  c.api.useState(data);
+  c.api.scheduleSave({...data,queue:['b','a']});await c.api.flush();
+  assert.equal(c.writes.length,1);
+  const updated=firestoreMapOrder(c.writes[0].data.data);updated.songs[0].count=2;
+  c.api.scheduleSave(updated);await c.api.flush();
+  assert.equal(c.writes.length,2);
+  assert.equal(c.writes[1].data.data.songs[0].count,2);
 });
