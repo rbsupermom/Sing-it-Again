@@ -66,3 +66,9 @@ The pool is editable before the first invite; pool editing and host transfer aft
 2. Merge the frontend and confirm GitHub Pages succeeds. Cache v9 includes the history module.
 3. Verify the signed-in app, existing history recovery, and completion totals. Do not send test invites or invent performances in the live pair.
 4. Record release and verification in the Notion project hub.
+
+## Sync-loop correction · September 26, 2026
+
+The first history integration compared JSON strings with insertion-order-sensitive map fields. Firestore returns fields in a different order, so reconciliation could mistake an unchanged server snapshot for a local edit and save it again indefinitely. Canonical comparison now sorts object keys recursively while preserving array order. Both history reconciliation and account save/snapshot comparisons use it. Identical pending saves are also coalesced. Pending writes say Saving; cache-only snapshots say Connecting instead of implying the device is offline.
+
+Reproduced before fixing: unchanged map order triggered new saves, including five extra saves from five server acknowledgements. All three regression reproductions now pass, and an additional check verifies real edits and queue reordering still save. All 40 app tests and syntax checks pass. No Firestore rule changes are needed. Cache v10 and the syncfix1 entrypoint pick up the fix after refresh.

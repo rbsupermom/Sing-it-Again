@@ -1,4 +1,5 @@
 import {applyAction, replay} from './singo-engine.js';
+import {stableStringify} from './state-data.js';
 
 // A source ID identifies a performance, not a delivery of a snapshot. Replaying
 // the shared records repairs interrupted saves without counting a song twice.
@@ -130,5 +131,5 @@ export function reconcileHistory(original, batches, now = new Date().toISOString
     if (song.lastSung && !removedLast) times.push(song.lastSung);
     song.lastSung = times.sort().at(-1) || null;
   }
-  return JSON.stringify(data) === JSON.stringify(original) ? original : data;
+  return stableStringify(data) === stableStringify(original) ? original : data;
 }
