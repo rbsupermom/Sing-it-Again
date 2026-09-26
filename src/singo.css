@@ -1,0 +1,17 @@
+#singoScreen{padding:0 16px 100px;max-width:680px;margin:auto}
+.singo-eyebrow{color:var(--gold);font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.singo-score{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.85rem}
+.singo-score strong{color:var(--teal);font-size:1.3rem}
+.singo-call{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 0}
+.singo-call strong{color:var(--gold);font-size:2.3rem;font-family:'Archivo',sans-serif}
+.singo-call>span{font-size:.8rem;color:var(--cream-dim)}
+.singo-letters,.singo-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.singo-letters{text-align:center;font-weight:800;color:var(--gold);font-size:1.35rem;padding:8px 0}
+.singo-square{min-width:0;min-height:110px;padding:8px 4px;border:1px solid #77608e;border-radius:10px;background:#251d34;color:#faf5ff;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:space-between;overflow-wrap:anywhere}
+.singo-square b{font-family:'Archivo',sans-serif;font-size:1.3rem}.singo-square span{font-size:.69rem;line-height:1.2}.singo-square small{font-size:.57rem;color:#d5c4e6}
+.singo-square.called.hidden{border:2px solid #62d6cc;background:#233d41}.singo-square.revealed{background:#423050;border-color:#b59bd3}.singo-square.earned{background:#145b54;border:2px solid #77e7c6}.singo-square.blocked{background:#302931;border-color:#8d7e87;color:#bfb0b9}.singo-square.blocked small{color:#f1b9c4}
+.singo-hint{font-size:.78rem;line-height:1.5;color:var(--cream-dim)}
+#singoScreen details{font-size:.8rem;margin:10px 0}#singoScreen summary{cursor:pointer;padding:8px 0}
+#singoScreen button:disabled{opacity:.55;cursor:wait}.singo-square:focus-visible{outline:3px solid #ffe194;outline-offset:2px}
+#singoCenter{margin-top:18px}#singoCenter label,#singoSetup label,#singoRematch label{display:block;margin:14px 0 6px}#singoSetup textarea{font-size:.8rem}#singoNewNight{width:auto;margin-right:8px}
+@media(min-width:500px){.singo-square{min-height:130px;padding:10px}.singo-square span{font-size:.85rem}.singo-square small{font-size:.7rem}}

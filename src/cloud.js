@@ -1,3 +1,4 @@
+import './singo.js';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup,
@@ -81,6 +82,7 @@ function useState(data) {
   if (ready && user) syncBackstage();
 }
 function stopPairListeners() {
+  window.KaraokeSingo?.connect(null);
   pairListeners.forEach(stop => stop());
   pairListeners = [];
   pair = null;
@@ -305,6 +307,7 @@ function listenPair(id) {
 }
 function subscribeShared(id) {
   sharedPairId = id;
+  window.KaraokeSingo?.connect({db,pairId:id,user,peerUid:peerUid(),peerName:peerName()});
   for (const [name, setter] of [
     ['messages', value => { messages = value; renderMessages(); }],
     ['challenges', value => { challenges = value; renderEntries('challenge'); }],
