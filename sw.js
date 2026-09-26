@@ -1,9 +1,14 @@
-const CACHE_NAME = 'sing-it-again-v7-backstage-reconnect';
+const CACHE_NAME = 'sing-it-again-v8-singo-bingo';
 const APP_SHELL = [
   './',
   './index.html',
   './firebase-config.js',
-  './src/cloud.js?v=backstage2',
+  './src/cloud.js?v=singo1',
+  './src/singo.js',
+  './src/singo-store.js',
+  './src/singo-engine.js',
+  './src/singo-pool.js',
+  './src/singo.css',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

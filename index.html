@@ -416,6 +416,7 @@ footer.curtain-call{text-align:center;color:#7a6a4d;font-size:.72rem;margin-top:
 <meta name="application-name" content="Sing It Again!">
 <meta name="description" content="Personal karaoke tracker with Roulette, Kamikaze, My Jam, Companion Singer, sessions, history, and stats.">
 
+<link rel="stylesheet" href="src/singo.css">
 </head>
 <body data-screen="homeScreen">
 <div class="app">
@@ -687,6 +688,7 @@ footer.curtain-call{text-align:center;color:#7a6a4d;font-size:.72rem;margin-top:
         <div class="cloud-status" id="cloudStatus" role="status"></div>
         <button class="ghost-btn small-action" id="accountBtn">Account &amp; invite</button>
       </div>
+      <button class="purple-btn full" onclick="switchScreen('singoScreen')">🎱 Singo-Bingo · Play with your partner</button>
       <div id="backstageInvite"></div>
       <div id="backstageRoom" hidden>
         <div class="backstage-tabs" role="tablist" aria-label="Backstage views">
@@ -711,6 +713,7 @@ footer.curtain-call{text-align:center;color:#7a6a4d;font-size:.72rem;margin-top:
         </div>
       </div>
     </section>
+  <section class="screen" id="singoScreen"><div class="section-title"><h2>Singo-Bingo</h2><p>Your voice. Your card. Your night.</p></div><p id="singoStatus" class="cloud-status" role="status"></p><div id="singoContent"></div></section>
   </main>
 
   <nav class="bottom-nav">
@@ -1613,7 +1616,7 @@ renderAll();
   }
 }
 </script>
-<script type="module" src="src/cloud.js?v=backstage2"></script>
+<script type="module" src="src/cloud.js?v=singo1"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

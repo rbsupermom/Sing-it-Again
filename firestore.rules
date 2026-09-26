@@ -63,6 +63,61 @@ service cloud.firestore {
       );
       allow delete: if false;
 
+      // Append-only game commands. Players cannot rewrite history or impersonate
+      // one another; both clients derive cards, song claims, and winners identically.
+      match /singo/{gameId} {
+        function validCreation() {
+          let d = request.resource.data;
+          return gameId == 'current' &&
+            d.keys().hasOnly(['sessionId','hostUid','guestUid','names','pool','mode','seed','revision','events','createdAt']) &&
+            d.sessionId is string && d.sessionId.size() == 36 &&
+            d.hostUid == request.auth.uid && otherMember(pairId, d.guestUid) &&
+            d.names is list && d.names.size() == 2 &&
+            d.names[0] is string && d.names[0].size() <= 120 &&
+            d.names[1] is string && d.names[1].size() <= 120 &&
+            d.pool is list && d.pool.size() >= 26 && d.pool.size() <= 300 &&
+            d.mode in ['traditional','heat'] && d.seed is int &&
+            d.revision == 0 && d.events == {} && d.createdAt == request.time;
+        }
+        function validAppend() {
+          let d = request.resource.data;
+          let key = string(d.revision);
+          let a = d.events[key];
+          return d.diff(resource.data).affectedKeys().hasOnly(['revision','events']) &&
+            d.revision == resource.data.revision + 1 && (d.revision <= 1500 || (d.revision == 1501 && a.type == 'end')) &&
+            d.events is map && d.events.size() == d.revision &&
+            d.events.diff(resource.data.events).affectedKeys().hasOnly([key]) &&
+            a is map && a.keys().hasOnly(['actor','type','index','song','mode','seed','newNight']) &&
+            a.actor == request.auth.uid &&
+            ((a.type in ['call','end','round'] && request.auth.uid == resource.data.hostUid) ||
+             (a.type in ['accept','decline'] && request.auth.uid == resource.data.guestUid) ||
+             a.type in ['reveal','center','sing','undo']) &&
+            (!(a.type in ['reveal','center','sing']) || (a.index is int && a.index >= 0 && a.index < 25)) &&
+            (a.type != 'center' || (songText(a.song) && a.song.keys().hasOnly(['title','artist']))) &&
+            (a.type != 'round' || (a.mode in ['traditional','heat'] && a.seed is int && a.newNight is bool));
+        }
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) && validCreation();
+        function validNewNight() {
+          let d = request.resource.data;
+          return validCreation() && d.sessionId != resource.data.sessionId &&
+            d.hostUid == resource.data.hostUid && d.guestUid == resource.data.guestUid &&
+            d.names == resource.data.names && d.pool == resource.data.pool &&
+            getAfter(/databases/$(database)/documents/pairs/$(pairId)/singoArchive/$(resource.data.sessionId)).data == resource.data;
+        }
+        allow update: if joined(pairId) && (validAppend() || validNewNight());
+        allow delete: if false;
+      }
+
+      match /singoArchive/{sessionId} {
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) &&
+          request.auth.uid == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.hostUid &&
+          sessionId == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.sessionId &&
+          request.resource.data == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data;
+        allow update, delete: if false;
+      }
+
       match /messages/{messageId} {
         allow read: if joined(pairId);
         allow create: if joined(pairId) &&

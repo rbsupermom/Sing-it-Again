@@ -47,7 +47,7 @@ function client({ bridgeSaves = true } = {}) {
       return () => { feed.active = false; };
     }
   };
-  let code = readFileSync('src/cloud.js', 'utf8').replace(/^import[\s\S]*?from '[^']+';\n/gm, '');
+  let code = readFileSync('src/cloud.js', 'utf8').replace(/^import '[^']+';\n/gm, '').replace(/^import[\s\S]*?from '[^']+';\n/gm, '');
   code += `\nuser={uid:'erica',email:'erica@example.com'}; db={}; stateRef='users/erica/private/state'; ready=true;
     window.testClient={useState,listenPair,stopListeners,savePairConnection,scheduleSave,flush,acceptInvite};`;
   runInNewContext(code, context);
