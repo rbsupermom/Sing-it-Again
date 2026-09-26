@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function pairData(id) {
+      return get(/databases/$(database)/documents/pairs/$(id)).data;
+    }
+    function member(id) {
+      return signedIn() &&
+        (pairData(id).ownerUid == request.auth.uid ||
+         pairData(id).partnerUid == request.auth.uid);
+    }
+    function joined(id) {
+      return member(id) && pairData(id).partnerUid is string;
+    }
+    function otherMember(id, uid) {
+      return (pairData(id).ownerUid == uid && pairData(id).partnerUid == request.auth.uid) ||
+             (pairData(id).partnerUid == uid && pairData(id).ownerUid == request.auth.uid);
+    }
+    function songText(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+        data.artist is string && data.artist.size() > 0 && data.artist.size() <= 120;
+    }
+
+    match /users/{uid}/private/{document} {
+      allow read, write: if signedIn() && request.auth.uid == uid && document == 'state';
+    }
+
+    match /pairs/{pairId} {
+      allow get: if signedIn() &&
+        (resource.data.ownerUid == request.auth.uid ||
+         resource.data.partnerUid == request.auth.uid ||
+         (resource.data.partnerUid == null &&
+          request.auth.token.email == resource.data.inviteeEmail));
+      allow list: if false;
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasAll(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) &&
+        request.resource.data.keys().hasOnly(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 80 &&
+        request.resource.data.partnerUid == null && request.resource.data.partnerName == '' &&
+        request.resource.data.inviteeEmail is string &&
+        request.resource.data.inviteeEmail.size() <= 254 &&
+        request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') &&
+        request.resource.data.inviteeEmail != request.auth.token.email &&
+        request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && (
+        (resource.data.ownerUid == request.auth.uid &&
+         resource.data.partnerUid == null &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inviteeEmail']) &&
+         request.resource.data.inviteeEmail is string &&
+         request.resource.data.inviteeEmail.size() <= 254 &&
+         request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') &&
+         request.resource.data.inviteeEmail != request.auth.token.email) ||
+        (resource.data.partnerUid == null &&
+         resource.data.inviteeEmail == request.auth.token.email &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerUid','partnerName']) &&
+         request.resource.data.partnerUid == request.auth.uid &&
+         request.resource.data.partnerName is string &&
+         request.resource.data.partnerName.size() <= 80)
+      );
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) &&
+          request.resource.data.keys().hasAll(['type','senderUid','text','createdAt']) &&
+          request.resource.data.keys().hasOnly(['type','senderUid','text','title','artist','createdAt']) &&
+          request.resource.data.senderUid == request.auth.uid &&
+          request.resource.data.type in ['text','song'] &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 500 &&
+          (request.resource.data.type == 'song'
+            ? songText(request.resource.data)
+            : request.resource.data.text.size() > 0) &&
+          request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      match /challenges/{itemId} {
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) &&
+          request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
+          request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
+          request.resource.data.senderUid == request.auth.uid &&
+          otherMember(pairId, request.resource.data.recipientUid) &&
+          songText(request.resource.data) &&
+          request.resource.data.note is string && request.resource.data.note.size() <= 500 &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.createdAt == request.time;
+        allow update: if joined(pairId) &&
+          resource.data.recipientUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          ((resource.data.status == 'pending' && request.resource.data.status in ['accepted','passed']) ||
+           (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
+        allow delete: if false;
+      }
+
+      match /duets/{itemId} {
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) &&
+          request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
+          request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
+          request.resource.data.senderUid == request.auth.uid &&
+          otherMember(pairId, request.resource.data.recipientUid) &&
+          songText(request.resource.data) &&
+          request.resource.data.note is string && request.resource.data.note.size() <= 500 &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.createdAt == request.time;
+        allow update: if joined(pairId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          ((resource.data.status == 'pending' &&
+            resource.data.recipientUid == request.auth.uid &&
+            request.resource.data.status in ['accepted','passed']) ||
+           (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
