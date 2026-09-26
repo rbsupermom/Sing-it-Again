@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sing-it-again-v4-theme-night';
+const CACHE_NAME = 'sing-it-again-v5-marquee';
 const APP_SHELL = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const APP_SHELL = [
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png',
-  './LobsterTwo-Regular.otf'
+  './Limelight.woff2',
+  './Archivo.woff2'
 ];
 
 self.addEventListener('install', event => {
