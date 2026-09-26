@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import assert from 'node:assert/strict';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { doc, collection, setDoc, getDoc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -55,6 +56,18 @@ test('personal songs stay private and only the invited partner can join Backstag
     await assertSucceeds(updateDoc(doc(erica, challenge.path), { status: 'accepted' }));
     await assertFails(updateDoc(doc(stranger, challenge.path), { status: 'sung' }));
     await assertSucceeds(updateDoc(doc(erica, challenge.path), { status: 'sung' }));
+    const duet=doc(collection(becca,pairPath,'duets'));
+    await setDoc(duet,{senderUid:'becca',recipientUid:'erica',title:'Shallow',artist:'Lady Gaga',note:'',status:'pending',createdAt:serverTimestamp()});
+    await updateDoc(doc(erica,duet.path),{status:'accepted'});
+    await assertFails(updateDoc(duet,{status:'sung',completedAt:new Date('2000-01-01')}));
+    await assertSucceeds(updateDoc(duet,{status:'sung',completedAt:serverTimestamp()}));
+    assert.ok((await getDoc(doc(erica,duet.path))).data().completedAt.toMillis()>0);
+    await assertFails(updateDoc(duet,{completedAt:serverTimestamp()}));
+    const timedChallenge=doc(collection(becca,pairPath,'challenges'));
+    await setDoc(timedChallenge,{senderUid:'becca',recipientUid:'erica',title:'Black Velvet',artist:'Alannah Myles',note:'',status:'pending',createdAt:serverTimestamp()});
+    await updateDoc(doc(erica,timedChallenge.path),{status:'accepted'});
+    await assertFails(updateDoc(timedChallenge,{status:'sung',completedAt:serverTimestamp()}));
+    await assertSucceeds(updateDoc(doc(erica,timedChallenge.path),{status:'sung',completedAt:serverTimestamp()}));
   } finally {
     await env.cleanup();
   }

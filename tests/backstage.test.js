@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import {entryHistory, singoHistory, reconcileHistory} from '../src/backstage-history.js';
 
 // Exercise the actual client against controlled account and Firestore events.
 // No production accounts or data are used.
@@ -26,6 +27,7 @@ function client({ bridgeSaves = true } = {}) {
     esc: value => String(value), showModal() {}, closeModal() {}, switchScreen() {}
   };
   const context = {
+    entryHistory, singoHistory, reconcileHistory,
     window: { KaraokeApp: app },
     document: { getElementById: node, querySelector: node },
     localStorage: { getItem: () => null, setItem() {} },
@@ -74,7 +76,7 @@ test('reopening the same invite keeps all live conversation subscriptions', () =
   c.emitPair('pair1');
   c.api.listenPair('pair1');
   c.emitPair('pair1');
-  assert.equal(c.feeds.filter(feed => feed.active).length, 4);
+  assert.equal(c.feeds.filter(feed => feed.active).length, 5);
   assert.equal(c.feeds.filter(feed => feed.active && feed.path.endsWith('/messages')).length, 1);
 });
 
@@ -118,4 +120,26 @@ test('an already accepted invite repairs a missing saved connection without rejo
   assert.ok(c.writes.some(write => write.data.backstagePairId === id));
   assert.equal(c.app.getState().pairId, id);
   assert.ok(c.feeds.some(feed => feed.active && feed.path === 'pairs/' + id + '/messages'));
+});
+
+test('acknowledged duet completions update the personal log and repair an older account snapshot', async () => {
+  const c=client();
+  c.api.listenPair('pair1');c.emitPair('pair1');
+  const feed=c.feeds.find(f=>f.path==='pairs/pair1/duets');
+  const completed={id:'duet1',data:()=>({senderUid:'becca',recipientUid:'erica',status:'sung',
+    title:'Shallow',artist:'Lady Gaga',createdAt:'2026-09-20T20:00:00Z',completedAt:new Date().toISOString()})};
+  feed.next({docs:[completed],metadata:{fromCache:true,hasPendingWrites:false}});
+  assert.equal(c.app.getState().performances.length,0,'unconfirmed cache must not rewrite account history');
+  feed.next({docs:[completed],metadata:{fromCache:false,hasPendingWrites:false}});
+  assert.equal(c.app.getState().performances.length,1);
+  assert.equal(c.app.getState().performances[0].performer,'together');
+  const performanceId=c.app.getState().performances[0].id;
+  c.api.useState({songs:[],sessions:[],performances:[],pairId:'pair1'});
+  assert.equal(c.app.getState().performances.length,1);
+  assert.equal(c.app.getState().performances[0].id,performanceId);
+  await c.api.flush();
+  assert.equal(c.writes.at(-1).data.data.performances.length,1);
+  c.api.stopListeners();
+  feed.next({docs:[completed],metadata:{fromCache:false,hasPendingWrites:false}});
+  assert.equal(c.app.getState().performances.length,1);
 });

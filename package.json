@@ -3,9 +3,9 @@
   "type": "module",
   "scripts": {
     "test:backstage": "node --test tests/backstage.test.js",
-    "check": "node --check src/cloud.js && node --check src/singo.js && node --check src/singo-engine.js && node --check src/singo-store.js && node --check sw.js",
+    "check": "node --check src/backstage-history.js && node --check src/cloud.js && node --check src/singo.js && node --check src/singo-engine.js && node --check src/singo-store.js && node --check sw.js",
     "test:rules": "npx --yes firebase-tools@14.25.1 emulators:exec --project demo-singo --only firestore 'node --test tests/rules.test.js tests/singo-rules.test.js'",
-    "test": "node --test tests/backstage.test.js tests/singo.test.js tests/singo-ui.test.js"
+    "test": "node --test tests/backstage.test.js tests/singo.test.js tests/singo-ui.test.js tests/backstage-history.test.js"
   },
   "dependencies": {
     "firebase": "12.19.0"

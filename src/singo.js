@@ -13,7 +13,7 @@ function connect(value) {
   generation++;if(stop)stop();stop=null;connection=value?{...value,key}:null;store=null;room=null;state=null;online=false;problem='';busy=false;
   if(value) {
     store=singoStore(value.db,value.pairId,value.user);const current=generation;
-    stop=store.listen((data,fresh)=>{if(current!==generation)return;room=data;state=data?replay(data):null;online=fresh;problem='';render();},error=>{
+    stop=store.listen((data,fresh)=>{if(current!==generation)return;room=data;state=data?replay(data):null;online=fresh;problem='';render();if(fresh)value.onHistory?.(data);},error=>{
       if(current!==generation)return;online=false;problem=error.code==='permission-denied'?'Singo-Bingo is waiting for its Firebase game rules to be published. Your songs and Backstage are still available.':'Could not connect to the game. Check your connection and reopen the app.';render();
     });
   }
@@ -50,7 +50,7 @@ async function act(action,round=state?.round,sessionId=room?.sessionId) {
 }
 function showSetup() {
   const pool=normalizePool(SHARED_POOL);
-  modal('Invite a Singo-Bingo game',`<form id="singoSetup"><p>The invite will appear for ${esc(connection.peerName)} in Singo-Bingo.</p><label for="singoMode">Game mode</label><select id="singoMode"><option value="traditional">Traditional · different songs on every card</option><option value="heat">Turn Up the Heat · race to sing shared songs</option></select><label for="singoPool">Shared song pool · one Title | Artist per line</label><p class="singo-hint">A shared starter list for both players. Edit together before inviting. Traditional needs at least 50 unique songs; Heat needs 26. Titles and cover versions count as the same song.</p><textarea id="singoPool" rows="8" required>${esc(pool.map(s=>s.title+' | '+s.artist).join('\n'))}</textarea><button class="primary-btn full" type="submit">Send game invite</button></form>`);
+  modal('Invite a Singo-Bingo game',`<form id="singoSetup"><p>The invite will appear for ${esc(connection.peerName)} in Singo-Bingo.</p><p>Sending starts your karaoke night, or uses the one already underway. Performed songs also appear in Home and History.</p><label for="singoMode">Game mode</label><select id="singoMode"><option value="traditional">Traditional · different songs on every card</option><option value="heat">Turn Up the Heat · race to sing shared songs</option></select><label for="singoPool">Shared song pool · one Title | Artist per line</label><p class="singo-hint">A shared starter list for both players. Edit together before inviting. Traditional needs at least 50 unique songs; Heat needs 26. Titles and cover versions count as the same song.</p><textarea id="singoPool" rows="8" required>${esc(pool.map(s=>s.title+' | '+s.artist).join('\n'))}</textarea><button class="primary-btn full" type="submit">Send game invite</button></form>`);
   document.getElementById('singoSetup').onsubmit=async event=>{
     event.preventDefault();if(busy||!online)return;
     const raw=document.getElementById('singoPool').value.split('\n').filter(l=>l.trim());

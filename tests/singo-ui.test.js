@@ -8,13 +8,13 @@ import {SHARED_POOL} from '../src/singo-pool.js';
 
 function ui({room=null,uid='becca',online=true}={}) {
   const dom=new JSDOM('<div id="singoStatus"></div><div id="singoContent"></div><div id="modal"></div>',{runScripts:'outside-only',url:'https://example.test'});
-  const w=dom.window,alerts=[],commands=[];let value=room,next,fail;
+  const w=dom.window,alerts=[],commands=[],history=[];let value=room,next,fail;
   Object.assign(w,engine,{SHARED_POOL,alert:m=>alerts.push(m),confirm:()=>true});
   w.KaraokeApp={esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),showModal:html=>w.document.getElementById('modal').innerHTML=html,closeModal:()=>w.document.getElementById('modal').innerHTML='',switchScreen:()=>{}};
   w.singoStore=()=>({listen(n,e){next=n;fail=e;return ()=>{};},async send(action,round,session){commands.push({action,round,session});Object.assign(value,engine.appendAction(value,{...action,actor:uid}).data);next(value,true);},async create(data){value={...data,hostUid:uid,sessionId:'session',revision:0,events:{}};next(value,true);}});
   const source=readFileSync('src/singo.js','utf8').replace(/^import .*?;\n/gm,'');runInContext(source,dom.getInternalVMContext());
-  w.KaraokeSingo.connect({db:{},pairId:'pair',user:{uid,displayName:'Becca'},peerUid:uid==='becca'?'erica':'becca',peerName:uid==='becca'?'Erica':'Becca'});next(value,online);
-  return {w,dom,alerts,commands,emit:(v,f=true)=>{value=v;next(v,f);},fail,html:()=>w.document.getElementById('singoContent').innerHTML,click:selector=>w.document.querySelector(selector).click()};
+  w.KaraokeSingo.connect({db:{},pairId:'pair',user:{uid,displayName:'Becca'},peerUid:uid==='becca'?'erica':'becca',peerName:uid==='becca'?'Erica':'Becca',onHistory:data=>history.push(data)});next(value,online);
+  return {w,dom,alerts,commands,history,emit:(v,f=true)=>{value=v;next(v,f);},fail,html:()=>w.document.getElementById('singoContent').innerHTML,click:selector=>w.document.querySelector(selector).click()};
 }
 function playing(mode='heat') {let g={hostUid:'becca',guestUid:'erica',names:['Becca','Erica'],mode,seed:123,sessionId:'session',pool:engine.normalizePool(SHARED_POOL),revision:0,events:{}};Object.assign(g,engine.appendAction(g,{actor:'erica',type:'accept'}).data);return g;}
 const tick=()=>new Promise(r=>setTimeout(r,0));
@@ -37,4 +37,9 @@ test('offline and permission errors disable shared actions with an actionable st
 });
 test('sign-out clears the previous game and late snapshots cannot restore it',()=>{
   const g=playing(),c=ui({room:g});c.w.KaraokeSingo.connect(null);c.emit(g);assert.match(c.html(),/Open Backstage/);assert.equal(c.w.document.querySelectorAll('[data-square]').length,0);
+});
+test('only confirmed game snapshots reach the personal history bridge',()=>{
+  const g=playing(),c=ui({room:g,online:false});assert.equal(c.history.length,0);
+  c.emit(g,true);assert.equal(c.history.length,1);
+  c.w.KaraokeSingo.connect(null);c.emit(g,true);assert.equal(c.history.length,1);
 });

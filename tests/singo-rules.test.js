@@ -23,6 +23,8 @@ test('two authenticated players persist games; rules enforce identity, host cont
     await assertFails(updateDoc(er,{revision:1,events:{'1':{actor:'erica',type:'call'}}}));
     await assertFails(updateDoc(xr,{revision:1,events:{'1':{actor:'outsider',type:'accept'}}}));
     await assertSucceeds(es.send({type:'accept'},1));
+    assert.ok((await getDoc(br)).data().events['1'].at.toMillis()>0,'game events receive server time');
+    await assertFails(updateDoc(br,{revision:2,events:{...((await getDoc(br)).data().events),'2':{actor:'becca',type:'call',at:new Date('2000-01-01')}}}));
     await assertFails(updateDoc(br,{pool:[]}));
     await assertFails(updateDoc(br,{revision:2,events:{'1':{actor:'erica',type:'decline'},'2':{actor:'becca',type:'call'}}}));
     await assertFails(updateDoc(br,{revision:7,events:{'7':{actor:'becca',type:'call'}}}));
