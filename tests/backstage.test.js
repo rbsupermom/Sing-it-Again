@@ -16,6 +16,7 @@ function client({ bridgeSaves = true } = {}) {
   };
   const feeds = [];
   const writes = [];
+  const membershipUpdates = [];
   let state = { songs: [], sessions: [], performances: [] };
   const app = {
     storageKey: 'test', hadLocalState: false,
@@ -30,10 +31,16 @@ function client({ bridgeSaves = true } = {}) {
     localStorage: { getItem: () => null, setItem() {} },
     console, URLSearchParams, URL, location: { search: '', href: 'https://example.com/' },
     setTimeout: () => 1, clearTimeout() {},
+    history: { replaceState() {} },
+    alert: message => { throw new Error(message); },
     doc: (...parts) => parts.filter(value => typeof value === 'string').join('/'),
     collection: (...parts) => parts.filter(value => typeof value === 'string').join('/'),
     query: path => path, orderBy() {}, limit() {}, serverTimestamp: () => 'server-time',
     setDoc: async (path, data, options) => { writes.push({ path, data, options }); },
+    getDocFromServer: async () => ({ exists: () => true, data: () => ({
+      ownerUid: 'becca', partnerUid: 'erica', inviteeEmail: 'erica@example.com'
+    }) }),
+    updateDoc: async (...args) => { membershipUpdates.push(args); },
     onSnapshot: (path, ...args) => {
       const feed = { path, next: args.find(value => typeof value === 'function'), active: true };
       feeds.push(feed);
@@ -42,12 +49,12 @@ function client({ bridgeSaves = true } = {}) {
   };
   let code = readFileSync('src/cloud.js', 'utf8').replace(/^import[\s\S]*?from '[^']+';\n/gm, '');
   code += `\nuser={uid:'erica',email:'erica@example.com'}; db={}; stateRef='users/erica/private/state'; ready=true;
-    window.testClient={useState,listenPair,stopListeners,savePairConnection,scheduleSave,flush};`;
+    window.testClient={useState,listenPair,stopListeners,savePairConnection,scheduleSave,flush,acceptInvite};`;
   runInNewContext(code, context);
   const joined = { ownerUid: 'becca', partnerUid: 'erica', ownerName: 'Becca', partnerName: 'Erica' };
   const emitPair = id => feeds.findLast(feed => feed.active && feed.path === 'pairs/' + id)
     .next({ exists: () => true, data: () => joined });
-  return { api: context.window.testClient, feeds, writes, node, emitPair, app };
+  return { api: context.window.testClient, feeds, writes, membershipUpdates, node, emitPair, app };
 }
 
 test('a restored account connection opens Backstage and receives existing messages', () => {
@@ -100,4 +107,15 @@ test('sign-out stops the previous account subscriptions', () => {
   c.api.stopListeners();
   assert.equal(c.feeds.filter(feed => feed.active).length, 0);
   assert.equal(c.node('backstageRoom').hidden, true);
+});
+
+test('an already accepted invite repairs a missing saved connection without rejoining', async () => {
+  const c = client();
+  const id = 'backstagePair1234567890';
+  await c.api.acceptInvite(id);
+  c.emitPair(id);
+  assert.equal(c.membershipUpdates.length, 0);
+  assert.ok(c.writes.some(write => write.data.backstagePairId === id));
+  assert.equal(c.app.getState().pairId, id);
+  assert.ok(c.feeds.some(feed => feed.active && feed.path === 'pairs/' + id + '/messages'));
 });
