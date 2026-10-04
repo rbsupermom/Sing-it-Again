@@ -1,84 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-    function pairData(id) {
-      return get(/databases/$(database)/documents/pairs/$(id)).data;
-    }
-    function member(id) {
-      return signedIn() &&
-        (pairData(id).ownerUid == request.auth.uid ||
-         pairData(id).partnerUid == request.auth.uid);
-    }
-    function joined(id) {
-      return member(id) && pairData(id).partnerUid is string;
-    }
-    function otherMember(id, uid) {
-      return (pairData(id).ownerUid == uid && pairData(id).partnerUid == request.auth.uid) ||
-             (pairData(id).partnerUid == uid && pairData(id).ownerUid == request.auth.uid);
-    }
-    function songText(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
-        data.artist is string && data.artist.size() > 0 && data.artist.size() <= 120;
-    }
+    function signedIn() { return request.auth != null; }
+    function pairData(id) { return get(/databases/$(database)/documents/pairs/$(id)).data; }
+    function member(id) { return signedIn() && (pairData(id).ownerUid == request.auth.uid || pairData(id).partnerUid == request.auth.uid); }
+    function joined(id) { return member(id) && pairData(id).partnerUid is string; }
+    function otherMember(id, uid) { return (pairData(id).ownerUid == uid && pairData(id).partnerUid == request.auth.uid) || (pairData(id).partnerUid == uid && pairData(id).ownerUid == request.auth.uid); }
+    function songText(data) { return data.title is string && data.title.size() > 0 && data.title.size() <= 120 && data.artist is string && data.artist.size() > 0 && data.artist.size() <= 120; }
 
     match /users/{uid}/private/{document} {
       allow read, write: if signedIn() && request.auth.uid == uid && document == 'state';
     }
 
     match /pairs/{pairId} {
-      allow get: if signedIn() &&
-        (resource.data.ownerUid == request.auth.uid ||
-         resource.data.partnerUid == request.auth.uid ||
-         (resource.data.partnerUid == null &&
-          request.auth.token.email == resource.data.inviteeEmail));
+      allow get: if signedIn() && (resource.data.ownerUid == request.auth.uid || resource.data.partnerUid == request.auth.uid || (resource.data.partnerUid == null && request.auth.token.email == resource.data.inviteeEmail));
       allow list: if false;
-      allow create: if signedIn() &&
-        request.resource.data.keys().hasAll(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) &&
-        request.resource.data.keys().hasOnly(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 80 &&
-        request.resource.data.partnerUid == null && request.resource.data.partnerName == '' &&
-        request.resource.data.inviteeEmail is string &&
-        request.resource.data.inviteeEmail.size() <= 254 &&
-        request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') &&
-        request.resource.data.inviteeEmail != request.auth.token.email &&
-        request.resource.data.createdAt == request.time;
-      allow update: if signedIn() && (
-        (resource.data.ownerUid == request.auth.uid &&
-         resource.data.partnerUid == null &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inviteeEmail']) &&
-         request.resource.data.inviteeEmail is string &&
-         request.resource.data.inviteeEmail.size() <= 254 &&
-         request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') &&
-         request.resource.data.inviteeEmail != request.auth.token.email) ||
-        (resource.data.partnerUid == null &&
-         resource.data.inviteeEmail == request.auth.token.email &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerUid','partnerName']) &&
-         request.resource.data.partnerUid == request.auth.uid &&
-         request.resource.data.partnerName is string &&
-         request.resource.data.partnerName.size() <= 80)
-      );
+      allow create: if signedIn() && request.resource.data.keys().hasAll(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) && request.resource.data.keys().hasOnly(['ownerUid','ownerName','partnerUid','partnerName','inviteeEmail','createdAt']) && request.resource.data.ownerUid == request.auth.uid && request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 80 && request.resource.data.partnerUid == null && request.resource.data.partnerName == '' && request.resource.data.inviteeEmail is string && request.resource.data.inviteeEmail.size() <= 254 && request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') && request.resource.data.inviteeEmail != request.auth.token.email && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && ((resource.data.ownerUid == request.auth.uid && resource.data.partnerUid == null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inviteeEmail']) && request.resource.data.inviteeEmail is string && request.resource.data.inviteeEmail.size() <= 254 && request.resource.data.inviteeEmail.matches('^[^@ ]+@[^@ ]+\\.[^@ ]+$') && request.resource.data.inviteeEmail != request.auth.token.email) || (resource.data.partnerUid == null && resource.data.inviteeEmail == request.auth.token.email && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['partnerUid','partnerName']) && request.resource.data.partnerUid == request.auth.uid && request.resource.data.partnerName is string && request.resource.data.partnerName.size() <= 80));
       allow delete: if false;
 
-      // Pair-shared performance archive. Personal history remains under each user's private state;
-      // this immutable copy exists so both joined singers can review the same karaoke nights.
       match /performances/{performanceId} {
         function validPerformance() {
           let d = request.resource.data;
-          return d.keys().hasAll(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) &&
-            d.keys().hasOnly(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) &&
-            d.performanceId is string && d.performanceId.size() > 0 && d.performanceId.size() <= 300 &&
-            d.performerUid == request.auth.uid &&
-            d.performerName is string && d.performerName.size() > 0 && d.performerName.size() <= 80 &&
-            songText(d) &&
-            d.sungAt is string && d.sungAt.size() >= 20 && d.sungAt.size() <= 40 &&
-            d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 300 &&
-            d.sessionName is string && d.sessionName.size() > 0 && d.sessionName.size() <= 120 &&
-            d.sourceLabel is string && d.sourceLabel.size() > 0 && d.sourceLabel.size() <= 40 &&
-            d.createdAt == request.time;
+          return d.keys().hasAll(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) && d.keys().hasOnly(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) && d.performanceId is string && d.performanceId.size() > 0 && d.performanceId.size() <= 300 && d.performerUid == request.auth.uid && d.performerName is string && d.performerName.size() > 0 && d.performerName.size() <= 80 && songText(d) && d.sungAt is string && d.sungAt.size() >= 20 && d.sungAt.size() <= 40 && d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 300 && d.sessionName is string && d.sessionName.size() > 0 && d.sessionName.size() <= 120 && d.sourceLabel is string && d.sourceLabel.size() > 0 && d.sourceLabel.size() <= 40 && d.createdAt == request.time;
         }
         allow read: if joined(pairId);
         allow create: if joined(pairId) && validPerformance();
@@ -87,13 +31,7 @@ service cloud.firestore {
         match /feedback/{authorUid} {
           function validFeedback() {
             let d = request.resource.data;
-            return d.keys().hasAll(['authorUid','authorName','rating','comment','updatedAt']) &&
-              d.keys().hasOnly(['authorUid','authorName','rating','comment','updatedAt']) &&
-              authorUid == request.auth.uid && d.authorUid == request.auth.uid &&
-              d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 80 &&
-              d.rating is int && d.rating >= 1 && d.rating <= 5 &&
-              d.comment is string && d.comment.size() <= 500 &&
-              d.updatedAt == request.time;
+            return d.keys().hasAll(['authorUid','authorName','rating','comment','updatedAt']) && d.keys().hasOnly(['authorUid','authorName','rating','comment','updatedAt']) && authorUid == request.auth.uid && d.authorUid == request.auth.uid && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 80 && d.rating is int && d.rating >= 1 && d.rating <= 5 && d.comment is string && d.comment.size() <= 500 && d.updatedAt is timestamp;
           }
           allow read: if joined(pairId);
           allow create, update: if joined(pairId) && validFeedback();
@@ -101,124 +39,43 @@ service cloud.firestore {
         }
       }
 
-      // Append-only game commands. Players cannot rewrite history or impersonate
-      // one another; both clients derive cards, song claims, and winners identically.
       match /singo/{gameId} {
-        function validCreation() {
-          let d = request.resource.data;
-          return gameId == 'current' &&
-            d.keys().hasOnly(['sessionId','hostUid','guestUid','names','pool','mode','seed','revision','events','createdAt']) &&
-            d.sessionId is string && d.sessionId.size() == 36 &&
-            d.hostUid == request.auth.uid && otherMember(pairId, d.guestUid) &&
-            d.names is list && d.names.size() == 2 &&
-            d.names[0] is string && d.names[0].size() <= 120 &&
-            d.names[1] is string && d.names[1].size() <= 120 &&
-            d.pool is list && d.pool.size() >= 26 && d.pool.size() <= 300 &&
-            d.mode in ['traditional','heat'] && d.seed is int &&
-            d.revision == 0 && d.events == {} && d.createdAt == request.time;
-        }
-        function validAppend() {
-          let d = request.resource.data;
-          let key = string(d.revision);
-          let a = d.events[key];
-          return d.diff(resource.data).affectedKeys().hasOnly(['revision','events']) &&
-            d.revision == resource.data.revision + 1 && (d.revision <= 1500 || (d.revision == 1501 && a.type == 'end')) &&
-            d.events is map && d.events.size() == d.revision &&
-            d.events.diff(resource.data.events).affectedKeys().hasOnly([key]) &&
-            a is map && a.keys().hasOnly(['actor','type','index','song','mode','seed','newNight','at']) &&
-            (!('at' in a) || a.at == request.time) &&
-            a.actor == request.auth.uid &&
-            ((a.type in ['call','end','round'] && request.auth.uid == resource.data.hostUid) ||
-             (a.type in ['accept','decline'] && request.auth.uid == resource.data.guestUid) ||
-             a.type in ['reveal','center','sing','undo']) &&
-            (!(a.type in ['reveal','center','sing']) || (a.index is int && a.index >= 0 && a.index < 25)) &&
-            (a.type != 'center' || (songText(a.song) && a.song.keys().hasOnly(['title','artist']))) &&
-            (a.type != 'round' || (a.mode in ['traditional','heat'] && a.seed is int && a.newNight is bool));
-        }
+        function validCreation() { let d = request.resource.data; return gameId == 'current' && d.keys().hasOnly(['sessionId','hostUid','guestUid','names','pool','mode','seed','revision','events','createdAt']) && d.sessionId is string && d.sessionId.size() == 36 && d.hostUid == request.auth.uid && otherMember(pairId, d.guestUid) && d.names is list && d.names.size() == 2 && d.names[0] is string && d.names[0].size() <= 120 && d.names[1] is string && d.names[1].size() <= 120 && d.pool is list && d.pool.size() >= 26 && d.pool.size() <= 300 && d.mode in ['traditional','heat'] && d.seed is int && d.revision == 0 && d.events == {} && d.createdAt == request.time; }
+        function validAppend() { let d = request.resource.data; let key = string(d.revision); let a = d.events[key]; return d.diff(resource.data).affectedKeys().hasOnly(['revision','events']) && d.revision == resource.data.revision + 1 && (d.revision <= 1500 || (d.revision == 1501 && a.type == 'end')) && d.events is map && d.events.size() == d.revision && d.events.diff(resource.data.events).affectedKeys().hasOnly([key]) && a is map && a.keys().hasOnly(['actor','type','index','song','mode','seed','newNight','at']) && (!('at' in a) || a.at == request.time) && a.actor == request.auth.uid && ((a.type in ['call','end','round'] && request.auth.uid == resource.data.hostUid) || (a.type in ['accept','decline'] && request.auth.uid == resource.data.guestUid) || a.type in ['reveal','center','sing','undo']) && (!(a.type in ['reveal','center','sing']) || (a.index is int && a.index >= 0 && a.index < 25)) && (a.type != 'center' || (songText(a.song) && a.song.keys().hasOnly(['title','artist']))) && (a.type != 'round' || (a.mode in ['traditional','heat'] && a.seed is int && a.newNight is bool)); }
         allow read: if joined(pairId);
         allow create: if joined(pairId) && validCreation();
-        function validNewNight() {
-          let d = request.resource.data;
-          return validCreation() && d.sessionId != resource.data.sessionId &&
-            d.hostUid == resource.data.hostUid && d.guestUid == resource.data.guestUid &&
-            d.names == resource.data.names && d.pool == resource.data.pool &&
-            getAfter(/databases/$(database)/documents/pairs/$(pairId)/singoArchive/$(resource.data.sessionId)).data == resource.data;
-        }
+        function validNewNight() { let d = request.resource.data; return validCreation() && d.sessionId != resource.data.sessionId && d.hostUid == resource.data.hostUid && d.guestUid == resource.data.guestUid && d.names == resource.data.names && d.pool == resource.data.pool && getAfter(/databases/$(database)/documents/pairs/$(pairId)/singoArchive/$(resource.data.sessionId)).data == resource.data; }
         allow update: if joined(pairId) && (validAppend() || validNewNight());
         allow delete: if false;
       }
 
       match /singoArchive/{sessionId} {
         allow read: if joined(pairId);
-        allow create: if joined(pairId) &&
-          request.auth.uid == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.hostUid &&
-          sessionId == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.sessionId &&
-          request.resource.data == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data;
+        allow create: if joined(pairId) && request.auth.uid == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.hostUid && sessionId == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data.sessionId && request.resource.data == get(/databases/$(database)/documents/pairs/$(pairId)/singo/current).data;
         allow update, delete: if false;
       }
 
       match /messages/{messageId} {
         allow read: if joined(pairId);
-        allow create: if joined(pairId) &&
-          request.resource.data.keys().hasAll(['type','senderUid','text','createdAt']) &&
-          request.resource.data.keys().hasOnly(['type','senderUid','text','title','artist','createdAt']) &&
-          request.resource.data.senderUid == request.auth.uid &&
-          request.resource.data.type in ['text','song'] &&
-          request.resource.data.text is string &&
-          request.resource.data.text.size() <= 500 &&
-          (request.resource.data.type == 'song'
-            ? songText(request.resource.data)
-            : request.resource.data.text.size() > 0) &&
-          request.resource.data.createdAt == request.time;
+        allow create: if joined(pairId) && request.resource.data.keys().hasAll(['type','senderUid','text','createdAt']) && request.resource.data.keys().hasOnly(['type','senderUid','text','title','artist','createdAt']) && request.resource.data.senderUid == request.auth.uid && request.resource.data.type in ['text','song'] && request.resource.data.text is string && request.resource.data.text.size() <= 500 && (request.resource.data.type == 'song' ? songText(request.resource.data) : request.resource.data.text.size() > 0) && request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }
 
       match /challenges/{itemId} {
         allow read: if joined(pairId);
-        allow create: if joined(pairId) &&
-          request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
-          request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
-          request.resource.data.senderUid == request.auth.uid &&
-          otherMember(pairId, request.resource.data.recipientUid) &&
-          songText(request.resource.data) &&
-          request.resource.data.note is string && request.resource.data.note.size() <= 500 &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.createdAt == request.time;
-        allow update: if joined(pairId) &&
-          resource.data.recipientUid == request.auth.uid &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) &&
-          (!('completedAt' in request.resource.data) ||
-            (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) &&
-          ((resource.data.status == 'pending' && request.resource.data.status in ['accepted','passed']) ||
-           (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
+        allow create: if joined(pairId) && request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) && request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) && request.resource.data.senderUid == request.auth.uid && otherMember(pairId, request.resource.data.recipientUid) && songText(request.resource.data) && request.resource.data.note is string && request.resource.data.note.size() <= 500 && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+        allow update: if joined(pairId) && resource.data.recipientUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) && (!('completedAt' in request.resource.data) || (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) && ((resource.data.status == 'pending' && request.resource.data.status in ['accepted','passed']) || (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
         allow delete: if false;
       }
 
       match /duets/{itemId} {
         allow read: if joined(pairId);
-        allow create: if joined(pairId) &&
-          request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
-          request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) &&
-          request.resource.data.senderUid == request.auth.uid &&
-          otherMember(pairId, request.resource.data.recipientUid) &&
-          songText(request.resource.data) &&
-          request.resource.data.note is string && request.resource.data.note.size() <= 500 &&
-          request.resource.data.status == 'pending' &&
-          request.resource.data.createdAt == request.time;
-        allow update: if joined(pairId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) &&
-          (!('completedAt' in request.resource.data) ||
-            (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) &&
-          ((resource.data.status == 'pending' &&
-            resource.data.recipientUid == request.auth.uid &&
-            request.resource.data.status in ['accepted','passed']) ||
-           (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
+        allow create: if joined(pairId) && request.resource.data.keys().hasAll(['senderUid','recipientUid','title','artist','note','status','createdAt']) && request.resource.data.keys().hasOnly(['senderUid','recipientUid','title','artist','note','status','createdAt']) && request.resource.data.senderUid == request.auth.uid && otherMember(pairId, request.resource.data.recipientUid) && songText(request.resource.data) && request.resource.data.note is string && request.resource.data.note.size() <= 500 && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+        allow update: if joined(pairId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']) && (!('completedAt' in request.resource.data) || (request.resource.data.status == 'sung' && request.resource.data.completedAt == request.time)) && ((resource.data.status == 'pending' && resource.data.recipientUid == request.auth.uid && request.resource.data.status in ['accepted','passed']) || (resource.data.status == 'accepted' && request.resource.data.status == 'sung'));
         allow delete: if false;
       }
     }
 
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    match /{document=**} { allow read, write: if false; }
   }
 }
