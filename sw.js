@@ -1,9 +1,10 @@
-const CACHE_NAME = 'sing-it-again-v10-sync-fix';
+const CACHE_NAME = 'sing-it-again-v11-performance-feedback';
 const APP_SHELL = [
   './',
   './index.html',
   './firebase-config.js',
   './src/cloud.js?v=syncfix1',
+  './src/performance-feedback.js?v=1',
   './src/singo.js',
   './src/backstage-history.js',
   './src/state-data.js',
