@@ -63,6 +63,44 @@ service cloud.firestore {
       );
       allow delete: if false;
 
+      // Pair-shared performance archive. Personal history remains under each user's private state;
+      // this immutable copy exists so both joined singers can review the same karaoke nights.
+      match /performances/{performanceId} {
+        function validPerformance() {
+          let d = request.resource.data;
+          return d.keys().hasAll(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) &&
+            d.keys().hasOnly(['performanceId','performerUid','performerName','title','artist','sungAt','sessionId','sessionName','sourceLabel','createdAt']) &&
+            d.performanceId is string && d.performanceId.size() > 0 && d.performanceId.size() <= 300 &&
+            d.performerUid == request.auth.uid &&
+            d.performerName is string && d.performerName.size() > 0 && d.performerName.size() <= 80 &&
+            songText(d) &&
+            d.sungAt is string && d.sungAt.size() >= 20 && d.sungAt.size() <= 40 &&
+            d.sessionId is string && d.sessionId.size() > 0 && d.sessionId.size() <= 300 &&
+            d.sessionName is string && d.sessionName.size() > 0 && d.sessionName.size() <= 120 &&
+            d.sourceLabel is string && d.sourceLabel.size() > 0 && d.sourceLabel.size() <= 40 &&
+            d.createdAt == request.time;
+        }
+        allow read: if joined(pairId);
+        allow create: if joined(pairId) && validPerformance();
+        allow update, delete: if false;
+
+        match /feedback/{authorUid} {
+          function validFeedback() {
+            let d = request.resource.data;
+            return d.keys().hasAll(['authorUid','authorName','rating','comment','updatedAt']) &&
+              d.keys().hasOnly(['authorUid','authorName','rating','comment','updatedAt']) &&
+              authorUid == request.auth.uid && d.authorUid == request.auth.uid &&
+              d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 80 &&
+              d.rating is int && d.rating >= 1 && d.rating <= 5 &&
+              d.comment is string && d.comment.size() <= 500 &&
+              d.updatedAt == request.time;
+          }
+          allow read: if joined(pairId);
+          allow create, update: if joined(pairId) && validFeedback();
+          allow delete: if joined(pairId) && authorUid == request.auth.uid;
+        }
+      }
+
       // Append-only game commands. Players cannot rewrite history or impersonate
       // one another; both clients derive cards, song claims, and winners identically.
       match /singo/{gameId} {
